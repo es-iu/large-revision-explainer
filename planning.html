@@ -1,0 +1,978 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Large Revision Planning</title>
+<!--
+  MOCKUP ONLY — Large Revision · Planning Phase (Prism × Course Content Hub alignment).
+  Self-contained: no external requests. All data below is hard-coded.
+  Style tokens taken from SSP (ai.media.ssp): tailwind.config.js colours, css/main.css
+  (Roboto, #1D1D1F text, #E5E7EB page), TopBarView (64px white bar, box-shadow),
+  ButtonComponent (rounded-lg, bold, #3772FF/#0044E4) and LargeRevisionStepperComponent (pills).
+-->
+<style>
+  :root {
+    /* SSP palette (tailwind.config.js / LargeRevisionStepperComponent.vue) */
+    --iu-blue: #0044E4;
+    --iu-blue-hover: #0033AB;
+    --iu-black: #1D1D1F;
+    --iu-anthracite: #575E62;
+    --iu-grey: #C7CDD0;
+    --iu-grey-light: #EBEBEB;
+    --page: #E5E7EB;
+    --surface: #FFFFFF;
+    --surface-soft: #F2F3F5;
+    --pending-bg: #F0F1F2;
+    --pending-fg: #898A8A;
+    --shadow: 0 9px 25px 0 rgba(0,0,0,.12);
+    --shadow-soft: 0 2px 8px rgba(0,0,0,.06);
+    --radius: 12px;
+    --radius-sm: 8px;
+
+    /* Change types: built from SSP feedback + accent colours */
+    --merged-fg: #652E98;  --merged-bg: #F3EAFB;  --merged-line: #9A62CC;
+    --renamed-fg: #0E48C7; --renamed-bg: #E6EDFF; --renamed-line: #3772FF;
+    --removed-fg: #8A0A0A; --removed-bg: #FFE3E3; --removed-line: #C62525;
+    --new-fg: #175830;     --new-bg: #D2F3E0;     --new-line: #1E8A4C;
+    --same-fg: #575E62;    --same-bg: #F2F3F5;    --same-line: #B3B9BD;
+
+    --warn-bg: #FFF0BA; --warn-fg: #684B00;
+
+    --font: Roboto, "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    font-family: var(--font);
+    color: var(--iu-black);
+    background: var(--page);
+    font-size: 15px;
+    line-height: 1.5;
+    font-feature-settings: 'clig' off, 'liga' off;
+  }
+  button { font-family: inherit; }
+  h1, h2, h3, h4 { margin: 0; font-weight: 700; }
+
+  /* ---------- Mockup banner ---------- */
+  .mock-banner {
+    background: var(--warn-bg); color: var(--warn-fg);
+    text-align: center; font-size: 13px; font-weight: 700; letter-spacing: .02em;
+    padding: 6px 16px;
+  }
+
+  /* ---------- Top bar (SSP TopBarView) ---------- */
+  .header { position: sticky; top: 0; z-index: 40; }
+  .topbar {
+    height: 64px; background: var(--surface); box-shadow: var(--shadow);
+    display: flex; align-items: center; gap: 28px; padding: 0 32px;
+  }
+  .topbar img { height: 36px; display: block; }
+  .course-id { min-width: 0; border-left: 1px solid var(--iu-grey-light); padding-left: 24px; }
+  .course-id .eyebrow { font-size: 12px; color: var(--iu-anthracite); }
+  .course-id .name { font-weight: 700; font-size: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .course-id .code { font-weight: 400; color: var(--iu-anthracite); }
+
+  /* Stepper (1:1 from LargeRevisionStepperComponent) */
+  .stepper { margin-left: auto; display: flex; align-items: center; flex-shrink: 0; }
+  .stepper .conn { width: 28px; height: 2px; background: var(--iu-grey); }
+  .pill {
+    display: flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 40px;
+    white-space: nowrap; font-size: 13px; font-weight: 500; border: 2px solid transparent;
+  }
+  .pill--active { background: #fff; color: var(--iu-blue); border-color: var(--iu-blue); }
+  .pill--pending { background: var(--pending-bg); color: var(--pending-fg); }
+  .pill .sub { font-size: 11px; font-weight: 400; opacity: .85; }
+  .avatar { width: 40px; height: 40px; border-radius: 50%; background: var(--iu-anthracite); color: #fff;
+    display: grid; place-items: center; font-weight: 700; font-size: 14px; flex-shrink: 0; }
+
+  /* ---------- Page layout ---------- */
+  .page { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 24px; padding: 24px 32px 120px; }
+  .card { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow-soft); }
+
+  /* Intro / summary strip */
+  .intro { padding: 20px 24px; display: flex; gap: 32px; align-items: center; flex-wrap: wrap; margin-bottom: 20px; }
+  .intro h1 { font-size: 22px; line-height: 1.3; }
+  .intro p { margin: 4px 0 0; color: var(--iu-anthracite); max-width: 60ch; }
+  .intro .left { flex: 1 1 360px; }
+  .summary { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+  .impact { flex: 0 1 320px; min-width: 260px; }
+  .impact .label { display: flex; justify-content: space-between; font-size: 13px; color: var(--iu-anthracite); }
+  .impact .label b { color: var(--iu-black); font-size: 15px; }
+  .meter { position: relative; height: 10px; background: var(--surface-soft); border-radius: 10px; margin: 10px 0 26px; }
+  .meter .fill { position: absolute; inset: 0 auto 0 0; width: 31%; background: var(--new-line); border-radius: 10px; }
+  .meter .mark { position: absolute; top: -5px; bottom: -5px; left: 40%; width: 2px; background: var(--iu-black); }
+  .meter .mark::after { content: "40% restart threshold"; position: absolute; top: 22px; left: 0; transform: translateX(-50%); font-size: 11px; font-weight: 700; white-space: nowrap; color: var(--iu-anthracite); }
+  .impact .hint { font-size: 13px; color: var(--new-fg); display: flex; gap: 6px; align-items: flex-start; }
+
+  /* ---------- Badges ---------- */
+  .badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
+    padding: 3px 8px; border-radius: 40px; white-space: nowrap; line-height: 1.4;
+  }
+  .b-merged  { background: var(--merged-bg);  color: var(--merged-fg); }
+  .b-renamed { background: var(--renamed-bg); color: var(--renamed-fg); }
+  .b-removed { background: var(--removed-bg); color: var(--removed-fg); }
+  .b-new     { background: var(--new-bg);     color: var(--new-fg); }
+  .b-same    { background: var(--same-bg);    color: var(--same-fg); }
+  .sum-chip { font-size: 13px; font-weight: 700; padding: 5px 12px; border-radius: 40px; }
+
+  /* ---------- Board: before → after ---------- */
+  .board-heads, .board { display: grid; grid-template-columns: minmax(250px, 330px) 96px minmax(0, 1fr); }
+  .board-heads { margin-bottom: 10px; align-items: end; }
+  .col-head h2 { font-size: 16px; }
+  .col-head .meta { font-size: 13px; color: var(--iu-anthracite); }
+  .gutter-head { text-align: center; font-size: 22px; color: var(--iu-anthracite); padding-bottom: 6px; }
+  .board { position: relative; align-items: start; }
+  .col { display: flex; flex-direction: column; gap: 14px; }
+  .col-old { grid-column: 1; }
+  .col-new { grid-column: 3; }
+  #links { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; z-index: 2; }
+  #links path { fill: none; transition: opacity .25s, stroke-width .25s; }
+  #links .dot { transition: opacity .25s; }
+
+  .unit {
+    background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow-soft);
+    border: 2px solid transparent; transition: opacity .25s, border-color .25s, box-shadow .25s, transform .25s;
+    position: relative;
+  }
+  .unit-head { padding: 14px 16px 10px; cursor: pointer; border-radius: var(--radius) var(--radius) 0 0; }
+  .unit-head:hover { background: #FAFAFB; }
+  .unit-num { font-size: 12px; font-weight: 700; color: var(--iu-anthracite); letter-spacing: .04em; text-transform: uppercase; }
+  .unit h3 { font-size: 15px; line-height: 1.35; margin-top: 2px; }
+  .head-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .from { font-size: 13px; color: var(--iu-anthracite); margin-top: 4px; }
+  .was { font-size: 13px; color: var(--iu-anthracite); margin-top: 4px; }
+  .was s { color: var(--removed-fg); }
+
+  .subs { list-style: none; margin: 0; padding: 0 8px 10px; }
+  .subs li {
+    display: flex; gap: 10px; align-items: baseline; padding: 6px 8px; border-radius: var(--radius-sm);
+    font-size: 14px; line-height: 1.4; transition: background .25s, box-shadow .25s;
+  }
+  .subs li .n { color: var(--iu-anthracite); min-width: 26px; font-variant-numeric: tabular-nums; }
+  .subs li .t { flex: 1; }
+  .subs li .origin { font-size: 12px; color: var(--pending-fg); white-space: nowrap; }
+  .subs li.clickable { cursor: pointer; }
+  .subs li.clickable:hover { filter: brightness(.97); }
+  .subs li.is-new { background: var(--new-bg); }
+  .subs li.is-new .n { color: var(--new-fg); font-weight: 700; }
+  .subs li.is-removed { background: var(--removed-bg); }
+  .subs li.is-removed .t { text-decoration: line-through; text-decoration-color: var(--removed-line); color: var(--removed-fg); }
+  .subs li.goes-away .t { color: var(--removed-fg); }
+  .subs li .badge { align-self: center; }
+
+  /* Change-type edge on new units */
+  .col-new .unit::before { content: ""; position: absolute; left: -2px; top: -2px; bottom: -2px; width: 6px; border-radius: var(--radius) 0 0 var(--radius); }
+  .unit.c-merged::before  { background: var(--merged-line); }
+  .unit.c-renamed::before { background: var(--renamed-line); }
+  .unit.c-kept::before, .unit.c-same::before { background: var(--same-line); }
+  .col-new .unit-head { padding-left: 20px; }
+  .col-new .subs { padding-left: 12px; }
+
+  /* Learning objectives toggle (left column) */
+  .goals-toggle {
+    display: flex; align-items: center; gap: 6px; width: 100%; border: 0; border-top: 1px solid var(--iu-grey-light);
+    background: none; padding: 10px 16px; font-size: 13px; font-weight: 700; color: var(--iu-blue); cursor: pointer;
+    border-radius: 0 0 var(--radius) var(--radius);
+  }
+  .goals-toggle:hover { background: #F5F8FF; }
+  .goals-toggle .chev { transition: transform .2s; }
+  .goals-toggle[aria-expanded="true"] .chev { transform: rotate(180deg); }
+  .goals { margin: 0; padding: 4px 16px 14px 34px; font-size: 13px; color: var(--iu-anthracite); }
+  .goals li { margin: 4px 0; }
+  .goals .lead { list-style: none; margin-left: -18px; font-style: italic; }
+
+  /* Selection state */
+  .board.has-selection .unit:not(.is-selected):not(.is-source) { opacity: .42; }
+  .unit.is-selected { border-color: var(--iu-blue); box-shadow: 0 0 0 4px rgba(0,68,228,.12), var(--shadow); }
+  .unit.is-source   { border-color: var(--iu-blue); border-style: dashed; box-shadow: 0 0 0 4px rgba(0,68,228,.08); }
+  .subs li.is-focus { box-shadow: inset 0 0 0 2px var(--iu-blue); }
+  .source-tag {
+    position: absolute; top: -11px; right: 12px; background: var(--iu-blue); color: #fff; font-size: 11px; font-weight: 700;
+    padding: 2px 10px; border-radius: 40px; display: none;
+  }
+  .unit.is-source .source-tag, .unit.is-selected .source-tag { display: block; }
+
+  @keyframes pulse { 0%{ box-shadow: 0 0 0 0 rgba(0,68,228,.45);} 100%{ box-shadow: 0 0 0 14px rgba(0,68,228,0);} }
+  .pulse { animation: pulse 1s ease-out 2; }
+
+  /* Goals card (module description) */
+  .module-goals { margin-top: 24px; padding: 20px 24px; }
+  .module-goals h2 { font-size: 16px; }
+  .module-goals .meta { font-size: 13px; color: var(--iu-anthracite); margin: 2px 0 12px; }
+  .goal-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; }
+  .goal-list li { display: flex; gap: 12px; align-items: baseline; padding: 10px 12px; border-radius: var(--radius-sm); background: var(--surface-soft); font-size: 14px; }
+  .goal-list li.is-new { background: var(--new-bg); }
+  .goal-list li .badge { align-self: center; }
+  .goal-list .gnum { font-weight: 700; color: var(--iu-anthracite); min-width: 18px; }
+  .module-meta { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
+  .meta-chip { font-size: 12px; background: var(--surface-soft); color: var(--iu-anthracite); border-radius: 40px; padding: 4px 10px; }
+
+  /* ---------- Assistant column ---------- */
+  .assistant {
+    position: sticky; top: 104px; align-self: start;
+    height: calc(100vh - 104px - 112px); min-height: 520px;
+    display: flex; flex-direction: column; overflow: hidden;
+  }
+  .as-head { padding: 18px 20px 14px; border-bottom: 1px solid var(--iu-grey-light); }
+  .as-title { display: flex; align-items: center; gap: 10px; }
+  .ai-mark { width: 34px; height: 34px; border-radius: 10px; background: linear-gradient(135deg, #3772FF, #652E98); color: #fff; display: grid; place-items: center; flex-shrink: 0; }
+  .as-title h2 { font-size: 16px; }
+  .as-title .tag { font-size: 12px; color: var(--iu-anthracite); font-weight: 400; }
+  .rules-label { font-size: 12px; font-weight: 700; color: var(--iu-anthracite); margin: 14px 0 8px; text-transform: uppercase; letter-spacing: .05em; }
+  .rules { display: flex; flex-wrap: wrap; gap: 6px; }
+  .rule { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; padding: 5px 10px; border-radius: 40px; border: 1px solid; font-weight: 500; }
+  .rule--locked { background: var(--surface-soft); border-color: var(--surface-soft); color: var(--iu-anthracite); cursor: default; }
+  .rule--adjust { background: #fff; border-color: var(--iu-blue); color: var(--iu-blue); cursor: pointer; }
+  .rule--adjust:hover { background: #F5F8FF; }
+  .rule svg { flex-shrink: 0; }
+  .rules-legend { display: flex; gap: 14px; font-size: 12px; color: var(--iu-anthracite); margin-top: 8px; }
+  .rules-legend span { display: inline-flex; gap: 4px; align-items: center; }
+
+  .chat { flex: 1; overflow-y: auto; padding: 16px 20px; display: flex; flex-direction: column; gap: 12px; scroll-behavior: smooth; }
+  .msg { max-width: 88%; padding: 10px 14px; border-radius: 14px; font-size: 14px; line-height: 1.5; animation: rise .3s ease-out; }
+  @keyframes rise { from { opacity: 0; transform: translateY(6px);} to { opacity: 1; transform: none; } }
+  .msg.ai { background: var(--surface-soft); border-bottom-left-radius: 4px; align-self: flex-start; }
+  .msg.me { background: var(--iu-blue); color: #fff; border-bottom-right-radius: 4px; align-self: flex-end; }
+  .msg .who { display: block; font-size: 11px; font-weight: 700; opacity: .7; margin-bottom: 2px; }
+  .msg .show { display: inline-flex; align-items: center; gap: 4px; margin-top: 8px; border: 1px solid var(--iu-blue); color: var(--iu-blue); background: #fff; border-radius: 40px; padding: 3px 10px; font-size: 12px; font-weight: 700; cursor: pointer; }
+  .msg .show:hover { background: #F5F8FF; }
+  .typing { display: inline-flex; gap: 4px; padding: 12px 14px; }
+  .typing i { width: 6px; height: 6px; border-radius: 50%; background: var(--pending-fg); animation: blink 1s infinite; }
+  .typing i:nth-child(2) { animation-delay: .15s; } .typing i:nth-child(3) { animation-delay: .3s; }
+  @keyframes blink { 0%,100%{opacity:.25} 50%{opacity:1} }
+
+  .as-foot { border-top: 1px solid var(--iu-grey-light); padding: 12px 16px 16px; }
+  .suggest { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+  .suggest button { border: 1px solid var(--iu-grey); background: #fff; color: var(--iu-black); border-radius: 40px; padding: 4px 10px; font-size: 12.5px; cursor: pointer; }
+  .suggest button:hover { border-color: var(--iu-blue); color: var(--iu-blue); }
+  .composer { display: flex; gap: 8px; }
+  .composer input { flex: 1; min-width: 0; border: 1px solid var(--iu-grey); border-radius: var(--radius-sm); padding: 10px 12px; font: inherit; font-size: 14px; }
+  .composer input:focus { outline: 2px solid var(--iu-blue); outline-offset: -1px; border-color: transparent; }
+  .replay { border: 0; background: none; color: var(--iu-blue); font-size: 12px; font-weight: 700; cursor: pointer; padding: 0; margin-top: 8px; }
+
+  /* Why-drawer (slides over the chat) */
+  .why {
+    position: absolute; inset: 0; background: var(--surface); z-index: 5; display: flex; flex-direction: column;
+    transform: translateX(104%); transition: transform .3s ease; box-shadow: -8px 0 24px rgba(0,0,0,.06);
+  }
+  .why.open { transform: none; }
+  .why-head { padding: 16px 20px 14px; border-bottom: 1px solid var(--iu-grey-light); }
+  .why-back { border: 0; background: none; color: var(--iu-blue); font-weight: 700; font-size: 13px; cursor: pointer; padding: 0; display: inline-flex; gap: 4px; align-items: center; }
+  .why-head h2 { font-size: 18px; margin-top: 10px; }
+  .why-body { padding: 16px 20px 24px; overflow-y: auto; }
+  .why-title { font-size: 16px; font-weight: 700; margin: 8px 0 4px; line-height: 1.35; }
+  .why-summary { font-size: 14px; color: var(--iu-anthracite); margin: 0 0 16px; }
+  .why-sec { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--iu-anthracite); margin: 18px 0 8px; }
+  .reasons { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }
+  .reasons li { border: 1px solid var(--iu-grey-light); border-radius: var(--radius-sm); padding: 10px 12px; font-size: 14px; }
+  .src { display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; font-weight: 700; color: var(--iu-anthracite); margin-bottom: 4px; }
+  .src i { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+  .draft-goals { margin: 0; padding-left: 20px; font-size: 14px; }
+  .draft-goals li { margin: 6px 0; }
+  .why-note { background: var(--surface-soft); border-radius: var(--radius-sm); padding: 10px 12px; font-size: 13px; color: var(--iu-anthracite); margin-top: 16px; }
+
+  /* ---------- Bottom bar ---------- */
+  .bottombar {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 40; background: var(--surface);
+    box-shadow: 0 -6px 20px rgba(0,0,0,.08); padding: 14px 32px; display: flex; align-items: center; gap: 16px;
+  }
+  .bottombar .note { font-size: 14px; color: var(--iu-anthracite); flex: 1; min-width: 0; }
+  .bottombar .note b { color: var(--iu-black); }
+  .btn { border-radius: var(--radius-sm); padding: 10px 18px; font-size: 15px; font-weight: 700; line-height: 22px; cursor: pointer; border: 1px solid; white-space: nowrap; }
+  .btn-secondary { background: #fff; color: var(--iu-anthracite); border-color: var(--iu-grey); }
+  .btn-secondary:hover { border-color: var(--iu-anthracite); color: var(--iu-black); }
+  .btn-primary { background: var(--iu-blue); color: #fff; border-color: var(--iu-blue); display: inline-flex; gap: 8px; align-items: center; }
+  .btn-primary:hover { background: var(--iu-blue-hover); }
+
+  /* Toast (SSP success/warning toast) */
+  .toast {
+    position: fixed; left: 50%; top: 120px; transform: translate(-50%, -12px); opacity: 0; pointer-events: none;
+    z-index: 60; background: var(--warn-bg); color: var(--warn-fg); padding: 14px 22px; border-radius: 6px;
+    box-shadow: var(--shadow); font-size: 14px; max-width: calc(100vw - 48px); transition: all .25s;
+  }
+  .toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+  /* ---------- Responsive ---------- */
+  @media (max-width: 1280px) {
+    .page { grid-template-columns: minmax(0, 1fr) 340px; padding: 20px 20px 120px; gap: 20px; }
+    .topbar { padding: 0 20px; gap: 18px; }
+    .pill .sub { display: none; }
+  }
+  @media (max-width: 1080px) {
+    .page { grid-template-columns: 1fr; }
+    .assistant { position: relative; top: 0; height: 640px; }
+    .course-id .eyebrow { display: none; }
+  }
+  @media (max-width: 760px) {
+    .board-heads, .board { grid-template-columns: 1fr; }
+    .gutter-head, #links { display: none; }
+    .col-new { grid-column: 1; margin-top: 24px; }
+    .board-heads .col-head:last-child { display: none; }
+    .stepper .pill--pending, .stepper .conn { display: none; }
+    .topbar img { height: 28px; }
+    .course-id { padding-left: 12px; }
+    .page { padding: 16px 16px 150px; }
+    .bottombar { flex-wrap: wrap; padding: 12px 16px; }
+    .bottombar .note { flex-basis: 100%; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="mock-banner">MOCKUP — not functional, for illustration only.</div>
+  <header class="topbar">
+    <img src="../assets/f1a8a57a3a249a21.png" alt="IU International University of Applied Sciences">
+    <div class="course-id">
+      <div class="eyebrow">Large Revision · Course</div>
+      <div class="name">Grundlagen der Neueren deutschen Literaturwissenschaft <span class="code">(DLBAGRMGNDL01)</span></div>
+    </div>
+    <nav class="stepper" aria-label="Revision steps">
+      <div class="pill pill--active" aria-current="step">1 · Structure / Learning Objectives <span class="sub">you are here</span></div>
+      <div class="conn"></div>
+      <div class="pill pill--pending">2 · Content</div>
+      <div class="conn"></div>
+      <div class="pill pill--pending">3 · Review</div>
+    </nav>
+    <div class="avatar" title="Course author">SW</div>
+  </header>
+</div>
+
+<main class="page">
+  <!-- ================= LEFT + CENTER: before → after ================= -->
+  <section aria-label="Structure plan">
+    <div class="card intro">
+      <div class="left">
+        <h1>Let's plan the new course structure</h1>
+        <p>On the left is the course today. On the right is what the assistant suggests. Click any coloured Lektion or sub-chapter to see <b>why</b> it changes.</p>
+        <div class="summary" id="summary" aria-label="Summary of changes">
+          <!-- filled by JS from the plan data -->
+        </div>
+      </div>
+      <div class="impact" aria-label="How much of the course changes">
+        <!-- Real value would come from the platform's change-impact calculation -->
+        <div class="label"><span>How much of the course changes</span><b>31%</b></div>
+        <div class="meter"><div class="fill"></div><div class="mark" title="Course-restart threshold"></div></div>
+        <div class="hint">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span>Below the 40% restart threshold, so students who are already enrolled can carry on. Workload stays at 150 h.</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="board-heads">
+      <div class="col-head">
+        <h2>Current structure</h2>
+        <div class="meta">Version 001 · 6 Lektionen · as published</div>
+      </div>
+      <div class="gutter-head" aria-hidden="true">→</div>
+      <div class="col-head">
+        <h2>Proposed new structure</h2>
+        <div class="meta">Version 002 · draft · 5 Lektionen · suggested with the assistant</div>
+      </div>
+    </div>
+
+    <div class="board" id="board">
+      <svg id="links" aria-hidden="true"></svg>
+      <div class="col col-old" id="colOld"></div>
+      <div class="col col-new" id="colNew"></div>
+    </div>
+
+    <div class="card module-goals">
+      <h2>Course goals</h2>
+      <div class="meta">From the module description (DLBAGRMGNDL). The assistant keeps these in line with the new structure.</div>
+      <ul class="goal-list" id="goalList"></ul>
+      <div class="module-meta">
+        <span class="meta-chip">5 CP</span><span class="meta-chip">150 h</span><span class="meta-chip">Fernstudium</span>
+        <span class="meta-chip">Exam: Advanced Workbook</span><span class="meta-chip">Content outline (Kursinhalt) updates automatically</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= RIGHT: AI Planning Assistant ================= -->
+  <aside class="card assistant" aria-label="AI Planning Assistant">
+    <div class="as-head">
+      <div class="as-title">
+        <div class="ai-mark" aria-hidden="true">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 3l1.8 4.9L19 9.7l-4.2 3 1.4 5.3L12 15l-4.2 3 1.4-5.3L5 9.7l5.2-1.8z" fill="currentColor"/></svg>
+        </div>
+        <div>
+          <h2>AI Planning Assistant</h2>
+          <div class="tag">Runs inside ContentHub · uses your input, the Job-Readiness framework and Constructive Alignment</div>
+        </div>
+      </div>
+      <div class="rules-label">Rules for this plan</div>
+      <!-- Real rules would be loaded from platform config (locked) and the author's plan settings (adjustable) -->
+      <div class="rules">
+        <span class="rule rule--locked" title="Set by the platform. Cannot be changed.">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2" stroke="currentColor" stroke-width="2"/><path d="M8 11V8a4 4 0 118 0v3" stroke="currentColor" stroke-width="2"/></svg>
+          Constructive Alignment ✓ <span style="opacity:.75">· system rule</span>
+        </span>
+        <span class="rule rule--locked" title="Set by the platform. Cannot be changed.">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2" stroke="currentColor" stroke-width="2"/><path d="M8 11V8a4 4 0 118 0v3" stroke="currentColor" stroke-width="2"/></svg>
+          Job-Readiness framework: active
+        </span>
+        <button class="rule rule--adjust" data-toast="In the real tool you could change the restart threshold here (for example 30% or 50%).">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+          Course-restart threshold: 40%
+        </button>
+        <button class="rule rule--adjust" data-toast="In the real tool you could choose who this plan is aligned with.">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+          Aligned with Kevin ✓
+        </button>
+      </div>
+      <div class="rules-legend">
+        <span><svg width="11" height="11" viewBox="0 0 24 24" fill="none"><rect x="5" y="11" width="14" height="10" rx="2" stroke="currentColor" stroke-width="2"/><path d="M8 11V8a4 4 0 118 0v3" stroke="currentColor" stroke-width="2"/></svg> Set by the platform</span>
+        <span style="color:var(--iu-blue)"><svg width="11" height="11" viewBox="0 0 24 24" fill="none"><path d="M4 20h4L19 9l-4-4L4 16z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg> You can change</span>
+      </div>
+    </div>
+
+    <div class="chat" id="chat" aria-live="polite"></div>
+
+    <div class="as-foot">
+      <div class="suggest" id="suggest"></div>
+      <form class="composer" id="composer">
+        <input id="composerInput" type="text" placeholder="Tell the assistant what you'd like to change…" aria-label="Message to the assistant">
+        <button class="btn btn-primary" type="submit" style="padding:8px 14px">Send</button>
+      </form>
+      <button class="replay" id="replay">↻ Replay the conversation</button>
+    </div>
+
+    <!-- "Why this change?" drawer -->
+    <div class="why" id="why" aria-hidden="true">
+      <div class="why-head">
+        <button class="why-back" id="whyBack">← Back to the assistant</button>
+        <h2>Why this change?</h2>
+      </div>
+      <div class="why-body" id="whyBody"></div>
+    </div>
+  </aside>
+</main>
+
+<footer class="bottombar">
+  <div class="note"><b>Nothing changes yet.</b> Your current course stays exactly as it is until you apply the new structure.</div>
+  <button class="btn btn-secondary" id="discard">Discard changes</button>
+  <button class="btn btn-primary" id="apply">
+    Apply new structure &amp; generate content
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  </button>
+</footer>
+
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+/* =====================================================================
+   DATA — hard-coded for the mockup.
+   OLD: real structure + Lernziele from the Lernskript DLBAGRMGNDL01
+        (Version 001-v3-2026-0608). In the product this would come from
+        the published course version in Core.
+   NEW / WHY / CHAT: invented demo scenario. In the product this would be
+        the AI planning agent's proposal (plan draft) and its evidence.
+   ===================================================================== */
+
+const OLD = [
+  { id: 'o1', num: 1, title: 'Einführung in die Neuere deutsche Literaturwissenschaft',
+    subs: [['1.1', 'Geschichte und Entwicklung des Fachs'], ['1.2', 'Eine Wissenschaftsdisziplin entsteht']],
+    goals: [
+      'den historischen und methodischen Unterschied zwischen der Älteren und Neueren deutschen Literaturwissenschaft zu erklären.',
+      'die kulturellen, gesellschaftlichen und wissenschaftlichen Entwicklungen der Frühen Neuzeit zu benennen.',
+      'die wesentlichen Entwicklungen zu beschreiben, die zur Etablierung des Deutschen als Literatursprache beigetragen haben.',
+      'die Entstehung der Neueren deutschen Literaturwissenschaft als wissenschaftliche Disziplin in ihrem historischen Kontext zu analysieren und damit verbundene gesellschaftliche Entwicklungen zu reflektieren.'
+    ] },
+  { id: 'o2', num: 2, title: 'Grundbegriffe der Literaturwissenschaft',
+    subs: [['2.1', 'Rhetorik, Poetik und Ästhetik'], ['2.2', 'Text, Literatur und Autorschaft']],
+    goals: [
+      'die Begriffe „Text“, „Literatur“ und „Autorschaft“ zu definieren und deren Entwicklung zu skizzieren.',
+      'den dynamischen Begriff von Literatur und seine Veränderungen im historischen sowie kulturellen Kontext zu erläutern.',
+      'zwischen den Konzepten „Fiktionalität“ und „Literarizität“ zu unterscheiden und deren Bedeutung darzulegen.',
+      'den erweiterten Textbegriff und die Auswirkungen digitaler Medien und KI auf die Literaturwissenschaft zu beschreiben.',
+      'grundlegende rhetorische Mittel zu identifizieren und deren Einfluss auf die Bedeutung von Texten zu analysieren.',
+      'die wesentlichen Überlegungen zur Poetik und Ästhetik zu skizzieren und deren Kernannahmen darzulegen.'
+    ] },
+  { id: 'o3', num: 3, title: 'Theorien und Methoden der Literaturwissenschaft',
+    subs: [['3.1', 'Literaturwissenschaftliche Ansätze'], ['3.2', 'Digitale Forschungsmethoden'], ['3.3', 'Editionsphilologie und Textkritik', 'r33']],
+    goals: [
+      'die Bedeutung literaturwissenschaftlicher Methoden für die Textanalyse und -interpretation darzulegen.',
+      'textorientierte, autororientierte, leserorientierte sowie kontextorientierte Ansätze zu unterscheiden und deren spezifische Strategie zu erläutern.',
+      'die Einsatzmöglichkeiten digitaler Forschungsmethoden in der Literaturwissenschaft zu erläutern und deren Potenzial zu diskutieren.',
+      'die Editionsphilologie als Methode zur Textbearbeitung und -rekonstruktion zu beschreiben und die unterschiedlichen Ausgaben von Texten zu unterscheiden.'
+    ] },
+  { id: 'o4', num: 4, title: 'Literarische Gattungen',
+    subs: [['4.1', 'Einführung in die Gattungstheorie'], ['4.2', 'Lyrik'], ['4.3', 'Drama'], ['4.4', 'Erzählende Literatur'], ['4.5', 'Hörspiel und literarische Gebrauchsformen']],
+    goals: [
+      'die Hauptmerkmale der wesentlichen literarischen Gattungen zu benennen.',
+      'die historische Entwicklung der wesentlichen literarischen Gattungen zu erläutern.',
+      'die spezifischen Untergattungen der Lyrik, des Dramas und der erzählenden Literatur zu benennen.',
+      'Formen der digitalen Literatur und deren Einfluss zu erklären.',
+      'das Hörspiel und literarische Gebrauchsformen zu definieren.'
+    ] },
+  { id: 'o5', num: 5, title: 'Eine kurze Geschichte der deutschsprachigen Literatur',
+    subs: [['5.1', 'Epochen der deutschsprachigen Literaturgeschichte'], ['5.2', 'Der literarische Kanon: Funktionen und Herausforderungen']],
+    goals: [
+      'den Begriff „Epoche“ und seine Bedeutung für die Literaturwissenschaft zu erklären.',
+      'die wichtigsten Kriterien zur Bestimmung literarischer Epochen zu benennen.',
+      'die Merkmale und Schlüsselthemen wichtiger Epochen zu beschreiben und ihren Einfluss auf die Literaturgeschichte zu analysieren.',
+      'die Funktion des literarischen Kanons zu beschreiben und die Kritik an ihr zu erläutern.'
+    ] },
+  { id: 'o6', num: 6, title: 'Berufsbilder für Literaturwissenschaftlerinnen und Literaturwissenschaftler',
+    subs: [['6.1', 'Verlagswesen, Journalismus und Medien'], ['6.2', 'Kultur- und Bildungsarbeit, Erwachsenenbildung'], ['6.3', 'Wissenschaft und Forschung, Informationswesen'], ['6.4', 'Kreative Berufe', 'r64'], ['6.5', 'Öffentlichkeitsarbeit, Politik und Gesellschaft']],
+    goals: [
+      'die Bedeutung digitaler Arbeitsmethoden und Künstlicher Intelligenz für die Berufspraxis zu erläutern.',
+      'die Vielfalt an Berufsfeldern für Literaturwissenschaftlerinnen und Literaturwissenschaftler zu benennen und deren spezifische Anforderungen zu erläutern.',
+      'zentrale Schlüsselkompetenzen herauszuarbeiten, die für eine erfolgreiche berufliche Laufbahn im Bereich der Literaturwissenschaft erforderlich sind.'
+    ] }
+];
+
+/* change: merged | renamed | kept | same.  Sub rows: {n, t, from?, add?, removed?} */
+const NEW = [
+  { id: 'n1', num: 1, change: 'merged', from: ['o1', 'o2'], fromText: 'Lektion 1 + Lektion 2 became this Lektion',
+    title: 'Einführung und Grundbegriffe der Literaturwissenschaft',
+    subs: [
+      { n: '1.1', t: 'Geschichte und Entwicklung des Fachs', from: 'was 1.1' },
+      { n: '1.2', t: 'Eine Wissenschaftsdisziplin entsteht', from: 'was 1.2' },
+      { n: '1.3', t: 'Rhetorik, Poetik und Ästhetik', from: 'was 2.1' },
+      { n: '1.4', t: 'Text, Literatur und Autorschaft', from: 'was 2.2' }
+    ] },
+  { id: 'n2', num: 2, change: 'renamed', from: ['o3'], was: 'Theorien und Methoden der Literaturwissenschaft',
+    title: 'Methoden und digitale Werkzeuge der Literaturwissenschaft',
+    subs: [
+      { n: '2.1', t: 'Literaturwissenschaftliche Ansätze', from: 'was 3.1' },
+      { n: '2.2', t: 'Digitale Forschungsmethoden', from: 'was 3.2' },
+      { n: '2.3', t: 'KI-gestützte Textanalyse', add: 'a23' },
+      { n: '—', t: 'Editionsphilologie und Textkritik', removed: 'r33' }
+    ] },
+  { id: 'n3', num: 3, change: 'kept', from: ['o4'], fromText: 'Was Lektion 4 · one sub-chapter added',
+    title: 'Literarische Gattungen',
+    subs: [
+      { n: '3.1', t: 'Einführung in die Gattungstheorie' }, { n: '3.2', t: 'Lyrik' }, { n: '3.3', t: 'Drama' },
+      { n: '3.4', t: 'Erzählende Literatur' }, { n: '3.5', t: 'Hörspiel und literarische Gebrauchsformen' },
+      { n: '3.6', t: 'Digitale und multimodale Literaturformen', add: 'a36' }
+    ] },
+  { id: 'n4', num: 4, change: 'same', from: ['o5'], fromText: 'Was Lektion 5 · content unchanged',
+    title: 'Eine kurze Geschichte der deutschsprachigen Literatur',
+    subs: [
+      { n: '4.1', t: 'Epochen der deutschsprachigen Literaturgeschichte' },
+      { n: '4.2', t: 'Der literarische Kanon: Funktionen und Herausforderungen' }
+    ] },
+  { id: 'n5', num: 5, change: 'kept', from: ['o6'], fromText: 'Was Lektion 6 · one sub-chapter removed',
+    title: 'Berufsbilder für Literaturwissenschaftlerinnen und Literaturwissenschaftler',
+    subs: [
+      { n: '5.1', t: 'Verlagswesen, Journalismus und Medien' },
+      { n: '5.2', t: 'Kultur- und Bildungsarbeit, Erwachsenenbildung' },
+      { n: '5.3', t: 'Wissenschaft und Forschung, Informationswesen' },
+      { n: '—', t: 'Kreative Berufe', removed: 'r64' },
+      { n: '5.4', t: 'Öffentlichkeitsarbeit, Politik und Gesellschaft' }
+    ] }
+];
+
+const BADGE = {
+  merged:  ['b-merged',  'Merged'],
+  renamed: ['b-renamed', 'Renamed'],
+  removed: ['b-removed', 'Removed'],
+  add:     ['b-new',     'New'],
+  kept:    ['b-same',    'Kept · adjusted'],
+  same:    ['b-same',    'Unchanged']
+};
+const LINE = { merged: '--merged-line', renamed: '--renamed-line', kept: '--same-line', same: '--same-line' };
+
+/* Evidence sources the planning agent draws on */
+const SRC = {
+  you:  ['Your input',                 '#0044E4'],
+  mv:   ['MV input',                   '#3D57A5'],
+  jr:   ['Job-Readiness framework',    '#1E8A4C'],
+  ca:   ['Constructive Alignment',     '#652E98'],
+  red:  ['Redundancy analysis',        '#A8A206'],
+};
+
+/* Rationale per change. In the product: the agent's reasoning + links to evidence. */
+const WHY = {
+  n1: { type: 'merged', title: 'Einführung und Grundbegriffe der Literaturwissenschaft',
+    summary: 'Old Lektion 1 and old Lektion 2 become the new Lektion 1. All four sub-chapters stay.',
+    reasons: [
+      ['you',  'You said Lektion 1 and 2 belong together.'],
+      ['mv',   'Students say the first weeks feel slow and repeat themselves.'],
+      ['red',  'Sub-chapters 1.2 and 2.2 both explain what literature is. About a third of the text overlaps.'],
+      ['ca',   'Both Lektionen serve the same course goal (goal 1). One goal, one Lektion keeps the path clear.']
+    ],
+    goalsHead: 'Learning objectives (draft) · 10 old objectives combined into 4',
+    goals: [
+      'die Entstehung der Neueren deutschen Literaturwissenschaft als wissenschaftliche Disziplin in ihrem historischen Kontext zu erklären.',
+      'die Begriffe „Text“, „Literatur“ und „Autorschaft“ zu definieren und zwischen „Fiktionalität“ und „Literarizität“ zu unterscheiden.',
+      'grundlegende rhetorische Mittel zu identifizieren und deren Einfluss auf die Bedeutung von Texten zu analysieren.',
+      'die Kernannahmen von Poetik und Ästhetik zu skizzieren.'
+    ] },
+  n2: { type: 'renamed', title: 'Methoden und digitale Werkzeuge der Literaturwissenschaft',
+    summary: 'Same Lektion, clearer and more up-to-date title. It was „Theorien und Methoden der Literaturwissenschaft“.',
+    reasons: [
+      ['you', 'You asked to give digital and AI topics more weight.'],
+      ['jr',  'Digital text analysis is listed as a future skill for jobs in publishing, media and education.'],
+      ['mv',  'The module owner wants the methods part to feel current.'],
+      ['ca',  'The new title matches what students actually do in the exam (Advanced Workbook).']
+    ],
+    note: 'Inside this Lektion: one new sub-chapter (2.3) and one removed (Editionsphilologie und Textkritik).' },
+  n3: { type: 'kept', title: 'Literarische Gattungen',
+    summary: 'Kept. It moves up to Lektion 3 (was Lektion 4) and gets one new sub-chapter.',
+    reasons: [
+      ['ca',  'Still covers course goal 2 (sorting literary genres and their forms) very well.'],
+      ['red', 'No overlap with other Lektionen found.']
+    ] },
+  n4: { type: 'same', title: 'Eine kurze Geschichte der deutschsprachigen Literatur',
+    summary: 'No change needed. Only the number moves (Lektion 5 → Lektion 4).',
+    reasons: [
+      ['ca', 'Directly covers course goal 3 (epochs and literary movements).'],
+      ['jr', 'Knowing the literary canon stays relevant for jobs in education and culture.']
+    ] },
+  n5: { type: 'kept', title: 'Berufsbilder für Literaturwissenschaftlerinnen und Literaturwissenschaftler',
+    summary: 'Kept. It becomes Lektion 5 (was Lektion 6). One sub-chapter is removed.',
+    reasons: [
+      ['jr', 'Career orientation is a core part of the Job-Readiness framework.'],
+      ['ca', 'Supports the course description: insight into career fields for literary scholars.']
+    ] },
+  r33: { type: 'removed', title: 'Editionsphilologie und Textkritik', sub: 'was 3.3',
+    summary: 'This sub-chapter is removed from the methods Lektion.',
+    reasons: [
+      ['jr', 'Low job relevance: editing and textual criticism rarely come up in the target jobs of this programme.'],
+      ['ca', 'Not linked to any course goal in the module description or to the exam task.'],
+      ['mv', 'The module owner agrees it can move to optional further reading.']
+    ],
+    note: 'Its learning objective („die Editionsphilologie als Methode … zu beschreiben“) is removed too. Nothing is deleted: the text stays in Version 001.' },
+  r64: { type: 'removed', title: 'Kreative Berufe', sub: 'was 6.4',
+    summary: 'This sub-chapter is removed from the careers Lektion.',
+    reasons: [
+      ['jr',  'Lower job relevance than the other career fields in this Lektion.'],
+      ['red', 'Largely repeats 6.1 „Verlagswesen, Journalismus und Medien“.']
+    ],
+    note: 'Nothing is deleted: the text stays in Version 001.' },
+  a23: { type: 'add', title: 'KI-gestützte Textanalyse', sub: 'new 2.3',
+    summary: 'A new sub-chapter in the methods Lektion.',
+    reasons: [
+      ['you', 'You asked for more weight on digital and AI topics.'],
+      ['jr',  'AI-supported text work is a named future skill in the Job-Readiness framework.'],
+      ['ca',  'A matching learning objective is drafted and linked to course goal 1 and the new course goal 5.']
+    ],
+    goalsHead: 'Learning objective (draft)',
+    goals: ['die Möglichkeiten und Grenzen KI-gestützter Verfahren der Textanalyse zu beschreiben und kritisch zu beurteilen.'] },
+  a36: { type: 'add', title: 'Digitale und multimodale Literaturformen', sub: 'new 3.6',
+    summary: 'A new sub-chapter in the genres Lektion.',
+    reasons: [
+      ['ca',  'Closes a gap: Lektion 4 already promises „Formen der digitalen Literatur und deren Einfluss zu erklären“, but no sub-chapter is dedicated to it yet.'],
+      ['jr',  'Digital and multimodal formats (podcasts, social media, games) are everyday work in media jobs.'],
+      ['you', 'Fits your wish to strengthen digital topics.']
+    ],
+    goalsHead: 'Learning objective (kept, now with its own sub-chapter)',
+    goals: ['Formen der digitalen und multimodalen Literatur zu beschreiben und deren Einfluss zu erklären.'] }
+};
+
+/* Course goals: first four are the real Qualifikationsziele from DLBAGRMGNDL; #5 is the demo addition. */
+const COURSE_GOALS = [
+  ['grundlegende Kenntnisse der Konzepte, Methoden und Begrifflichkeiten der Neueren deutschen Literaturwissenschaft zu erlangen und diese zu verwenden.'],
+  ['literarische Gattungen und ihre verschiedenen Erscheinungsformen einzuordnen und über ihre spezifischen Eigenheiten zu reflektieren.'],
+  ['die spezifischen Merkmale der wichtigsten Epochen und Strömungen der deutschsprachigen Literaturgeschichte zu benennen.'],
+  ['die literaturwissenschaftliche Fachsprache mündlich und schriftlich adäquat anzuwenden.'],
+  ['digitale und KI-gestützte Verfahren der Textanalyse anzuwenden und deren Möglichkeiten und Grenzen kritisch zu reflektieren.', 'new']
+];
+
+/* Canned conversation. `show` = keys the "Show me" button selects/flashes. */
+const CHAT = [
+  { who: 'ai', text: 'Hello! I have read the module description and the current course book (Version 001, 6 Lektionen). Tell me in your own words what you would like to change. I will suggest a new structure and explain every change.' },
+  { who: 'me', text: 'I think Lektion 1 and 2 belong together. Students tell us the start feels slow.' },
+  { who: 'ai', text: 'Agreed. Both Lektionen introduce the basics, and parts of 1.2 and 2.2 overlap. I merged them into one new Lektion 1: „Einführung und Grundbegriffe der Literaturwissenschaft“. All four sub-chapters are kept.', show: ['n1'] },
+  { who: 'me', text: 'Please give the digital / AI topics more weight.' },
+  { who: 'ai', text: 'Done. I renamed Lektion 3 to „Methoden und digitale Werkzeuge der Literaturwissenschaft“ and added two new sub-chapters: „KI-gestützte Textanalyse“ and „Digitale und multimodale Literaturformen“. The Job-Readiness framework lists both as future skills.', show: ['n2', 'a23', 'a36'] },
+  { who: 'me', text: 'Can we drop something so the workload stays the same?' },
+  { who: 'ai', text: 'I suggest removing 3.3 „Editionsphilologie und Textkritik“ and 6.4 „Kreative Berufe“. Both score low on job relevance, and 6.4 mostly repeats 6.1. In total about 31% of the course changes. That is below your 40% threshold, so enrolled students will not need to restart.', show: ['r33', 'r64'] },
+  { who: 'ai', text: 'Anything else? When you are happy with the plan, click „Apply new structure & generate content“ at the bottom.' }
+];
+
+const SUGGEST = [
+  ['Why was 3.3 removed?', 'Short version: it scores low on job relevance and is not linked to any course goal. I opened the details for you.', 'r33'],
+  ['Explain the 40% rule', 'If more than 40% of a course changes, enrolled students would have to restart it. This plan changes about 31%, so everyone can carry on.'],
+  ['Make Lektion 5 shorter', 'In the real tool I would now suggest shortening options for Lektion 5 and update the plan. (This mockup has a fixed script.)']
+];
+
+/* =====================================================================
+   RENDERING
+   ===================================================================== */
+const $ = (s, r = document) => r.querySelector(s);
+const esc = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;');
+const badge = k => `<span class="badge ${BADGE[k][0]}">${BADGE[k][1]}</span>`;
+
+function renderOld() {
+  $('#colOld').innerHTML = OLD.map(u => `
+    <article class="unit" data-id="${u.id}">
+      <span class="source-tag">Source</span>
+      <div class="unit-head" data-select="${u.id}">
+        <div class="unit-num">Lektion ${u.num}</div>
+        <h3>${esc(u.title)}</h3>
+      </div>
+      <ul class="subs">
+        ${u.subs.map(([n, t, rm]) => `
+          <li ${rm ? `class="goes-away clickable" data-select="${rm}" data-sub="${rm}"` : ''}>
+            <span class="n">${n}</span><span class="t">${esc(t)}</span>
+            ${rm ? badge('removed') : ''}
+          </li>`).join('')}
+      </ul>
+      <button class="goals-toggle" aria-expanded="false">
+        Learning objectives (${u.goals.length})
+        <svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>
+      </button>
+      <ul class="goals" hidden>
+        <li class="lead">Nach der Bearbeitung dieser Lektion wirst Du in der Lage sein, …</li>
+        ${u.goals.map(g => `<li>${esc(g)}</li>`).join('')}
+      </ul>
+    </article>`).join('');
+}
+
+function renderNew() {
+  $('#colNew').innerHTML = NEW.map(u => `
+    <article class="unit c-${u.change}" data-id="${u.id}">
+      <span class="source-tag">Selected</span>
+      <div class="unit-head" data-select="${u.id}">
+        <div class="head-row">${badge(u.change)}<span class="unit-num">Lektion ${u.num}</span></div>
+        <h3>${esc(u.title)}</h3>
+        ${u.was ? `<div class="was">Was: <s>${esc(u.was)}</s></div>` : ''}
+        ${u.fromText ? `<div class="from">${u.fromText}</div>` : ''}
+      </div>
+      <ul class="subs">
+        ${u.subs.map(s => {
+          if (s.add) return `<li class="is-new clickable" data-select="${s.add}" data-sub="${s.add}"><span class="n">${s.n}</span><span class="t">${esc(s.t)}</span>${badge('add')}</li>`;
+          if (s.removed) return `<li class="is-removed clickable" data-select="${s.removed}" data-sub="${s.removed}-ghost"><span class="n">${s.n}</span><span class="t">${esc(s.t)}</span>${badge('removed')}</li>`;
+          return `<li><span class="n">${s.n}</span><span class="t">${esc(s.t)}</span>${s.from ? `<span class="origin">${s.from}</span>` : ''}</li>`;
+        }).join('')}
+      </ul>
+    </article>`).join('');
+}
+
+function renderSummary() {
+  // Real counts would be derived from the plan diff.
+  $('#summary').innerHTML = `
+    <span class="sum-chip b-merged">2 merged</span>
+    <span class="sum-chip b-renamed">1 renamed</span>
+    <span class="sum-chip b-removed">2 removed</span>
+    <span class="sum-chip b-new">2 new</span>
+    <span class="sum-chip b-same">1 unchanged</span>`;
+}
+
+function renderGoals() {
+  $('#goalList').innerHTML = COURSE_GOALS.map(([g, flag], i) => `
+    <li class="${flag === 'new' ? 'is-new' : ''}"><span class="gnum">${i + 1}</span><span style="flex:1">${esc(g)}</span>${flag === 'new' ? badge('add') : badge('same')}</li>`).join('');
+}
+
+/* ---------- Connector lines (SVG between the two columns) ---------- */
+function drawLinks() {
+  const board = $('#board'), svg = $('#links');
+  if (getComputedStyle(svg).display === 'none') return;
+  const b = board.getBoundingClientRect();
+  const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+  const rel = el => { const r = el.getBoundingClientRect(); return { l: r.left - b.left, r: r.right - b.left, y: r.top - b.top + r.height / 2 }; };
+  const curve = (x1, y1, x2, y2) => { const dx = Math.max(30, (x2 - x1) * .5); return `M${x1},${y1} C${x1 + dx},${y1} ${x2 - dx},${y2} ${x2},${y2}`; };
+  let out = '';
+
+  NEW.forEach(n => {
+    const nh = $(`.col-new .unit[data-id="${n.id}"] .unit-head`);
+    const t = rel(nh);
+    n.from.forEach(o => {
+      const s = rel($(`.col-old .unit[data-id="${o}"] .unit-head`));
+      const color = css(LINE[n.change]);
+      const w = n.change === 'merged' || n.change === 'renamed' ? 3 : 2;
+      out += `<path class="lk" data-keys="${n.id} ${o}" d="${curve(s.r, s.y, t.l, t.y)}" stroke="${color}" stroke-width="${w}"/>`;
+      out += `<circle class="dot" data-keys="${n.id} ${o}" cx="${s.r}" cy="${s.y}" r="4" fill="${color}"/>`;
+      out += `<circle class="dot" data-keys="${n.id} ${o}" cx="${t.l}" cy="${t.y}" r="5" fill="${color}"/>`;
+    });
+  });
+
+  // Removed sub-chapters: red dashed line from the old row to the struck-out row
+  ['r33', 'r64'].forEach(k => {
+    const s = rel($(`[data-sub="${k}"]`)), t = rel($(`[data-sub="${k}-ghost"]`));
+    const c = css('--removed-line');
+    out += `<path class="lk" data-keys="${k}" d="${curve(s.r, s.y, t.l, t.y)}" stroke="${c}" stroke-width="2" stroke-dasharray="5 5"/>`;
+    const mx = (s.r + t.l) / 2, my = (s.y + t.y) / 2;
+    out += `<g class="dot" data-keys="${k}"><circle cx="${mx}" cy="${my}" r="9" fill="#fff" stroke="${c}" stroke-width="2"/><path d="M${mx - 3.5},${my - 3.5} L${mx + 3.5},${my + 3.5} M${mx + 3.5},${my - 3.5} L${mx - 3.5},${my + 3.5}" stroke="${c}" stroke-width="2" stroke-linecap="round"/></g>`;
+  });
+
+  // New sub-chapters: green "+" marker in the gutter, pointing in
+  ['a23', 'a36'].forEach(k => {
+    const t = rel($(`[data-sub="${k}"]`)), c = css('--new-line'), x = t.l - 34;
+    out += `<path class="lk" data-keys="${k}" d="M${x + 10},${t.y} L${t.l},${t.y}" stroke="${c}" stroke-width="2.5"/>`;
+    out += `<g class="dot" data-keys="${k}"><circle cx="${x}" cy="${t.y}" r="10" fill="${c}"/><path d="M${x - 4.5},${t.y} H${x + 4.5} M${x},${t.y - 4.5} V${t.y + 4.5}" stroke="#fff" stroke-width="2.2" stroke-linecap="round"/></g>`;
+  });
+
+  svg.innerHTML = out;
+  applyLinkFocus();
+}
+
+/* =====================================================================
+   SELECTION + "WHY THIS CHANGE?"
+   ===================================================================== */
+let selected = null;
+const OLD_TO_NEW = { o1: 'n1', o2: 'n1', o3: 'n2', o4: 'n3', o5: 'n4', o6: 'n5' };
+const PARENT = { r33: 'n2', r64: 'n5', a23: 'n2', a36: 'n3' };
+const PARENT_OLD = { r33: 'o3', r64: 'o6' };
+
+function select(key) {
+  if (OLD_TO_NEW[key]) key = OLD_TO_NEW[key];
+  selected = key;
+  const board = $('#board');
+  board.classList.add('has-selection');
+  document.querySelectorAll('.unit').forEach(u => u.classList.remove('is-selected', 'is-source'));
+  document.querySelectorAll('.subs li').forEach(li => li.classList.remove('is-focus'));
+
+  const n = NEW.find(x => x.id === key);
+  if (n) {
+    $(`.col-new [data-id="${key}"]`).classList.add('is-selected');
+    n.from.forEach(o => $(`.col-old [data-id="${o}"]`).classList.add('is-source'));
+  } else {
+    $(`.col-new [data-id="${PARENT[key]}"]`).classList.add('is-selected');
+    if (PARENT_OLD[key]) $(`.col-old [data-id="${PARENT_OLD[key]}"]`).classList.add('is-source');
+    document.querySelectorAll(`[data-sub^="${key}"]`).forEach(li => li.classList.add('is-focus'));
+  }
+  applyLinkFocus();
+  openWhy(key);
+}
+
+function clearSelection() {
+  selected = null;
+  $('#board').classList.remove('has-selection');
+  document.querySelectorAll('.unit').forEach(u => u.classList.remove('is-selected', 'is-source'));
+  document.querySelectorAll('.subs li').forEach(li => li.classList.remove('is-focus'));
+  applyLinkFocus();
+}
+
+function applyLinkFocus() {
+  document.querySelectorAll('#links [data-keys]').forEach(el => {
+    const keys = el.dataset.keys.split(' ');
+    const on = !selected || keys.includes(selected) || keys.includes(PARENT[selected]);
+    el.style.opacity = on ? 1 : .15;
+    if (el.tagName === 'path') el.style.strokeWidth = selected && on ? 4 : '';
+  });
+}
+
+function openWhy(key) {
+  const w = WHY[key]; if (!w) return;
+  $('#whyBody').innerHTML = `
+    ${badge(w.type)} ${w.sub ? `<span class="unit-num" style="margin-left:6px">${w.sub}</span>` : ''}
+    <div class="why-title">${esc(w.title)}</div>
+    <p class="why-summary">${esc(w.summary)}</p>
+    <div class="why-sec">What this is based on</div>
+    <ul class="reasons">
+      ${w.reasons.map(([s, t]) => `<li><div class="src"><i style="background:${SRC[s][1]}"></i>${SRC[s][0]}</div><div>${esc(t)}</div></li>`).join('')}
+    </ul>
+    ${w.goals ? `<div class="why-sec">${w.goalsHead}</div>
+      <p class="why-summary" style="margin:0 0 4px;font-style:italic">Nach der Bearbeitung dieser Lektion wirst Du in der Lage sein, …</p>
+      <ol class="draft-goals">${w.goals.map(g => `<li>${esc(g)}</li>`).join('')}</ol>` : ''}
+    ${w.note ? `<div class="why-note">${esc(w.note)}</div>` : ''}
+  `;
+  $('#why').classList.add('open');
+  $('#why').setAttribute('aria-hidden', 'false');
+}
+function closeWhy() {
+  $('#why').classList.remove('open');
+  $('#why').setAttribute('aria-hidden', 'true');
+  clearSelection();
+}
+
+function flash(keys) {
+  keys.forEach(k => {
+    const el = NEW.find(n => n.id === k) ? $(`.col-new [data-id="${k}"]`) : $(`[data-sub="${k}"]`);
+    if (!el) return;
+    el.classList.remove('pulse'); void el.offsetWidth; el.classList.add('pulse');
+  });
+}
+
+/* =====================================================================
+   CHAT (canned). In the product: streaming replies from the planning agent,
+   each reply carrying a plan patch that updates the "after" column.
+   ===================================================================== */
+function addMsg(m) {
+  const d = document.createElement('div');
+  d.className = `msg ${m.who}`;
+  d.innerHTML = `<span class="who">${m.who === 'ai' ? 'Assistant' : 'You'}</span>${esc(m.text)}` +
+    (m.show ? `<br><button class="show" data-show="${m.show.join(' ')}">Show me in the plan →</button>` : '');
+  $('#chat').appendChild(d);
+  $('#chat').scrollTop = $('#chat').scrollHeight;
+  return d;
+}
+function typing() {
+  const d = document.createElement('div');
+  d.className = 'msg ai typing'; d.innerHTML = '<i></i><i></i><i></i>';
+  $('#chat').appendChild(d); $('#chat').scrollTop = $('#chat').scrollHeight;
+  return d;
+}
+const wait = ms => new Promise(r => setTimeout(r, ms));
+async function aiReply(text, show) {
+  const t = typing(); await wait(900); t.remove();
+  addMsg({ who: 'ai', text, show });
+  if (show) flash(show);
+}
+
+let replaying = false;
+async function replay() {
+  if (replaying) return; replaying = true;
+  closeWhy();
+  $('#chat').innerHTML = '';
+  for (const m of CHAT) {
+    if (m.who === 'ai') await aiReply(m.text, m.show);
+    else { await wait(700); addMsg(m); }
+    await wait(500);
+  }
+  replaying = false;
+}
+
+function toast(msg) {
+  const t = $('#toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(toast.h); toast.h = setTimeout(() => t.classList.remove('show'), 3200);
+}
+
+/* =====================================================================
+   WIRING
+   ===================================================================== */
+renderOld(); renderNew(); renderSummary(); renderGoals();
+CHAT.forEach(addMsg);
+$('#chat').scrollTop = 0;
+$('#suggest').innerHTML = SUGGEST.map(([q], i) => `<button data-sug="${i}">${q}</button>`).join('');
+
+document.addEventListener('click', e => {
+  const tog = e.target.closest('.goals-toggle');
+  if (tog) {
+    const open = tog.getAttribute('aria-expanded') !== 'true';
+    tog.setAttribute('aria-expanded', open);
+    tog.nextElementSibling.hidden = !open;
+    return;
+  }
+  const sel = e.target.closest('[data-select]');
+  if (sel) { const k = sel.dataset.select; (selected === (OLD_TO_NEW[k] || k)) ? closeWhy() : select(k); return; }
+  const show = e.target.closest('[data-show]');
+  if (show) { const keys = show.dataset.show.split(' '); select(keys[0]); flash(keys); return; }
+  const sug = e.target.closest('[data-sug]');
+  if (sug) {
+    const [q, a, k] = SUGGEST[+sug.dataset.sug];
+    addMsg({ who: 'me', text: q });
+    aiReply(a).then(() => k && select(k));
+    return;
+  }
+  const r = e.target.closest('[data-toast]');
+  if (r) toast(r.dataset.toast);
+});
+
+$('#whyBack').addEventListener('click', closeWhy);
+$('#replay').addEventListener('click', replay);
+$('#composer').addEventListener('submit', e => {
+  e.preventDefault();
+  const v = $('#composerInput').value.trim(); if (!v) return;
+  addMsg({ who: 'me', text: v }); $('#composerInput').value = '';
+  aiReply('Thanks! In the real tool I would now update the plan and explain the change. This mockup only has a fixed script. Try the suggestions above.');
+});
+$('#apply').addEventListener('click', () => toast('Mockup: this would save Version 002 and move on to step 2 · Content. Not part of this mockup.'));
+$('#discard').addEventListener('click', () => { closeWhy(); toast('Mockup: this would throw away the draft plan. Version 001 stays as it is.'); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeWhy(); });
+
+// Keep connector lines in sync with layout changes (expanding objectives, resizing).
+new ResizeObserver(drawLinks).observe($('#board'));
+window.addEventListener('resize', drawLinks);
+drawLinks();
+</script>
+</body>
+</html>

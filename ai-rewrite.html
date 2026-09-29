@@ -1,0 +1,1017 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Large Revision · Option 1 · AI Full Rewrite</title>
+<!--
+  MOCKUP of Large Revision "Option 1 — AI does almost everything".
+  Not functional. All data is hard-coded, every interaction is canned.
+  Styling matches large-revision-planning-mockup-v5.html (same SSP tokens), so both screens read as one product.
+-->
+<style>
+  :root {
+    /* SSP palette (ai.media.ssp tailwind.config.js / LargeRevisionStepperComponent.vue) — same tokens as the planning mockup */
+    --iu-blue: #0044E4;
+    --iu-blue-hover: #0033AB;
+    --iu-blue-soft: #3772FF;
+    --iu-black: #1D1D1F;
+    --iu-anthracite: #575E62;
+    --iu-grey: #C7CDD0;
+    --iu-grey-light: #EBEBEB;
+    --page: #E5E7EB;
+    --surface: #FFFFFF;
+    --surface-soft: #F2F3F5;
+    --pending-bg: #F0F1F2;
+    --pending-fg: #898A8A;
+    --purple: #652E98;
+    --navy: #2B3845;
+    --shadow: 0 9px 25px 0 rgba(0,0,0,.12);
+    --shadow-soft: 0 2px 8px rgba(0,0,0,.06);
+    --radius: 12px;
+    --radius-sm: 8px;
+
+    --new-fg: #175830; --new-bg: #D2F3E0; --new-line: #1E8A4C;
+    --warn-bg: #FFF0BA; --warn-fg: #684B00;
+
+    /* PM annotation layer — SSP accent #74124D / #EECAE9, deliberately outside the product palette */
+    --pm-fg: #74124D; --pm-bg: #FCEFF8; --pm-line: #C0579A; --pm-soft: #EECAE9;
+
+    --font: Roboto, "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    font-family: var(--font); color: var(--iu-black); background: var(--page);
+    font-size: 15px; line-height: 1.5; font-feature-settings: 'clig' off, 'liga' off;
+    display: flex; flex-direction: column; overflow: hidden;
+  }
+  button { font-family: inherit; }
+  h1, h2, h3, h4 { margin: 0; font-weight: 700; }
+
+  /* ---------- Banner + top bar (SSP TopBarView) ---------- */
+  .mock-banner { background: var(--warn-bg); color: var(--warn-fg); text-align: center; font-size: 13px; font-weight: 700; letter-spacing: .02em; padding: 6px 16px; }
+  .topbar { height: 64px; background: var(--surface); box-shadow: var(--shadow); display: flex; align-items: center; gap: 24px; padding: 0 28px; position: relative; z-index: 30; flex-shrink: 0; }
+  .topbar img { height: 36px; display: block; }
+  .course-id { min-width: 0; border-left: 1px solid var(--iu-grey-light); padding-left: 24px; }
+  .course-id .eyebrow { font-size: 12px; color: var(--iu-anthracite); }
+  .course-id .name { font-weight: 700; font-size: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .course-id .code { font-weight: 400; color: var(--iu-anthracite); }
+  .mode { display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 40px; font-size: 13px; font-weight: 700; white-space: nowrap;
+          color: #fff; background: linear-gradient(135deg, var(--iu-blue-soft), var(--purple)); }
+  .top-right { margin-left: auto; display: flex; align-items: center; gap: 18px; flex-shrink: 0; }
+  .pm-toggle { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--iu-anthracite); cursor: pointer; user-select: none; border: 1px dashed var(--iu-grey); border-radius: 40px; padding: 4px 10px 4px 6px; background: #fff; }
+  .pm-toggle .switch { width: 30px; height: 18px; border-radius: 20px; background: var(--iu-grey); position: relative; transition: background .2s; }
+  .pm-toggle .switch::after { content: ""; position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-radius: 50%; background: #fff; transition: transform .2s; box-shadow: 0 1px 2px rgba(0,0,0,.2); }
+  body.pm .pm-toggle { border-color: var(--pm-line); color: var(--pm-fg); background: var(--pm-bg); font-weight: 700; }
+  body.pm .pm-toggle .switch { background: var(--pm-fg); }
+  body.pm .pm-toggle .switch::after { transform: translateX(12px); }
+  .avatar { width: 40px; height: 40px; border-radius: 50%; background: var(--iu-anthracite); color: #fff; display: grid; place-items: center; font-weight: 700; font-size: 14px; }
+
+  /* ---------- PM bar (only in PM view) ---------- */
+  .pm-bar { display: none; background: var(--pm-bg); border-bottom: 2px solid var(--pm-line); color: var(--pm-fg); padding: 8px 28px; font-size: 13px; gap: 16px; align-items: center; flex-shrink: 0; position: relative; z-index: 29; }
+  body.pm .pm-bar { display: flex; }
+  .pm-bar b { font-weight: 700; }
+  .pm-bar .pm-kicker { flex-shrink: 0; font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; background: var(--pm-fg); color: #fff; border-radius: 40px; padding: 3px 10px; }
+  .pm-bar .thesis { flex: 1; min-width: 0; line-height: 1.45; }
+  .pm-bar .src-line { display: block; font-size: 11.5px; color: var(--pm-line); margin-top: 1px; }
+
+  /* PM evidence footer */
+  .pm-evidence { display: none; flex-shrink: 0; background: var(--pm-bg); border-top: 2px solid var(--pm-line); padding: 8px 28px; gap: 8px 24px; flex-wrap: wrap; position: relative; z-index: 21; }
+  body.pm .pm-evidence { display: flex; }
+  .ev-group { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  .ev-h { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--pm-fg); margin-right: 2px; }
+  .ev-h small { text-transform: none; letter-spacing: 0; font-weight: 400; }
+  .ev-chip { font-size: 12px; background: #fff; color: #3E0A2A; border: 1px solid var(--pm-soft); border-radius: 40px; padding: 2px 10px; white-space: nowrap; }
+  .ev-chip.session { background: var(--pm-soft); border-color: var(--pm-soft); font-weight: 500; }
+
+  /* ---------- Cockpit layout ---------- */
+  .cockpit { flex: 1; min-height: 0; display: grid; grid-template-columns: 300px minmax(0, 1fr) 372px; }
+  .col-scroll { overflow-y: auto; min-height: 0; }
+
+  /* Left: parameters */
+  .params { position: relative; background: var(--surface); border-right: 1px solid var(--iu-grey-light); padding: 22px 22px 28px; }
+  .params h2 { font-size: 17px; }
+  .params .lead { font-size: 13.5px; color: var(--iu-anthracite); margin: 4px 0 0; }
+  .p-block { margin-top: 22px; }
+  .p-label { font-size: 12px; font-weight: 700; color: var(--iu-anthracite); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: baseline; }
+  .p-label b { text-transform: none; letter-spacing: 0; color: var(--iu-black); font-size: 15px; }
+  .p-hint { font-size: 12.5px; color: var(--iu-anthracite); margin-top: 6px; line-height: 1.45; }
+  input[type=range] { width: 100%; accent-color: var(--iu-blue); margin: 4px 0 0; }
+  .range-scale { display: flex; justify-content: space-between; font-size: 11px; color: var(--pending-fg); }
+  .sources { display: flex; flex-direction: column; gap: 6px; }
+  .src-chip { display: flex; align-items: center; gap: 8px; font-size: 13px; padding: 7px 10px; border-radius: var(--radius-sm); background: var(--surface-soft); color: var(--iu-black); }
+  .src-chip .lock { color: var(--iu-anthracite); flex-shrink: 0; }
+  .src-chip .on { margin-left: auto; font-size: 11px; font-weight: 700; color: var(--new-fg); background: var(--new-bg); border-radius: 40px; padding: 1px 8px; }
+  .src-chip small { color: var(--iu-anthracite); }
+  .seg { display: flex; background: var(--surface-soft); border-radius: var(--radius-sm); padding: 3px; gap: 2px; }
+  .seg button { flex: 1; border: 0; background: none; padding: 6px 4px; font-size: 12.5px; border-radius: 6px; cursor: pointer; color: var(--iu-anthracite); }
+  .seg button:hover { color: var(--iu-black); }
+  .seg button.on { background: #fff; color: var(--iu-blue); font-weight: 700; box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+  .knob + .knob { margin-top: 14px; }
+  .knob-name { font-size: 13.5px; font-weight: 500; margin-bottom: 6px; }
+  .focus-chip { display: inline-flex; gap: 6px; align-items: center; font-size: 12.5px; background: #E6EDFF; color: #0E48C7; border-radius: 40px; padding: 4px 10px; }
+  .btn { border-radius: var(--radius-sm); padding: 10px 18px; font-size: 15px; font-weight: 700; line-height: 22px; cursor: pointer; border: 1px solid; white-space: nowrap; display: inline-flex; gap: 8px; align-items: center; justify-content: center; }
+  .btn-primary { background: var(--iu-blue); color: #fff; border-color: var(--iu-blue); }
+  .btn-primary:hover { background: var(--iu-blue-hover); }
+  .btn-secondary { background: #fff; color: var(--iu-anthracite); border-color: var(--iu-grey); }
+  .btn-secondary:hover { border-color: var(--iu-anthracite); color: var(--iu-black); }
+  .btn[disabled] { background: var(--pending-bg); color: var(--pending-fg); border-color: var(--pending-bg); cursor: not-allowed; }
+  .btn-block { width: 100%; }
+  .tip { margin-top: 16px; font-size: 12.5px; color: var(--iu-anthracite); background: var(--surface-soft); border-radius: var(--radius-sm); padding: 10px 12px; display: flex; gap: 8px; }
+
+  /* Center: the living book */
+  .canvas { background: var(--page); position: relative; }
+  .status { position: sticky; top: 0; z-index: 8; background: rgba(229,231,235,.94); backdrop-filter: blur(6px); padding: 14px 32px 12px; border-bottom: 1px solid rgba(0,0,0,.05); }
+  .status-row { display: flex; align-items: center; gap: 16px; max-width: 820px; margin: 0 auto; }
+  .st-live { display: flex; align-items: center; gap: 10px; min-width: 0; flex: 1; }
+  .live-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--iu-blue-soft); flex-shrink: 0; box-shadow: 0 0 0 0 rgba(55,114,255,.5); animation: live 1.6s infinite; }
+  .live-dot.idle { background: var(--new-line); animation: none; }
+  @keyframes live { 0% { box-shadow: 0 0 0 0 rgba(55,114,255,.55);} 100% { box-shadow: 0 0 0 10px rgba(55,114,255,0);} }
+  .st-text { min-width: 0; }
+  .st-text .t1 { font-size: 14px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .st-text .t2 { font-size: 12.5px; color: var(--iu-anthracite); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .st-progress { width: 230px; flex-shrink: 0; }
+  .st-progress .lbl { display: flex; justify-content: space-between; font-size: 12px; color: var(--iu-anthracite); }
+  .st-progress .lbl b { color: var(--iu-black); }
+  .bar { height: 8px; background: #fff; border-radius: 8px; margin-top: 4px; overflow: hidden; }
+  .bar i { display: block; height: 100%; width: 0; border-radius: 8px; background: linear-gradient(90deg, var(--iu-blue-soft), var(--purple)); transition: width .4s; }
+  .chips { display: flex; gap: 6px; max-width: 820px; margin: 10px auto 0; flex-wrap: wrap; align-items: center; }
+  .uchip { border: 0; font-size: 12px; font-weight: 500; padding: 3px 10px; border-radius: 40px; cursor: pointer; display: inline-flex; gap: 5px; align-items: center; background: #fff; color: var(--pending-fg); }
+  .uchip.done { background: var(--new-bg); color: var(--new-fg); }
+  .uchip.writing { background: #E6EDFF; color: #0E48C7; font-weight: 700; }
+  .follow { margin-left: auto; border: 1px solid var(--iu-blue); background: #fff; color: var(--iu-blue); font-size: 12px; font-weight: 700; border-radius: 40px; padding: 3px 10px; cursor: pointer; display: none; }
+  .follow.show { display: inline-flex; }
+
+  .book { max-width: 820px; margin: 0 auto; padding: 22px 32px 90px; }
+  .sheet { background: #fff; border-radius: 4px; box-shadow: 0 1px 2px rgba(0,0,0,.06), 0 8px 24px rgba(0,0,0,.07); padding: 40px 48px 22px; margin-bottom: 26px; position: relative; }
+  .sheet-tag { position: absolute; top: 14px; right: 16px; font-size: 11px; font-weight: 700; letter-spacing: .04em; padding: 2px 10px; border-radius: 40px; display: inline-flex; gap: 5px; align-items: center; }
+  .tag-done { background: var(--new-bg); color: var(--new-fg); }
+  .tag-writing { background: #E6EDFF; color: #0E48C7; }
+  .tag-rewritten { background: #F3EAFB; color: var(--purple); }
+  .lk-eyebrow { font-size: 13px; font-weight: 700; letter-spacing: .12em; color: var(--iu-blue); }
+  .lk-title { font-size: 23px; letter-spacing: .03em; text-transform: uppercase; line-height: 1.25; margin-top: 4px; max-width: 32ch; }
+  .objectives { margin: 18px 0 8px; background: var(--surface-soft); border-radius: 6px; padding: 14px 18px; font-size: 13.5px; }
+  .objectives .h { font-size: 12px; font-weight: 700; letter-spacing: .1em; color: var(--iu-anthracite); }
+  .objectives p { margin: 4px 0 6px; font-style: italic; color: var(--iu-anthracite); }
+  .objectives ul { margin: 0; padding-left: 18px; }
+  .objectives li { margin: 3px 0; list-style: "–  "; }
+  .sheet-body { padding-left: 150px; position: relative; }
+  .sec { position: relative; margin-top: 22px; border-radius: 6px; transition: background .3s; }
+  .sec-h { display: flex; align-items: baseline; gap: 10px; }
+  .sec-h h3 { font-size: 17px; line-height: 1.3; color: var(--iu-black); }
+  .regen-btn { margin-left: auto; flex-shrink: 0; border: 1px solid var(--iu-grey); background: #fff; color: var(--iu-anthracite); font-size: 11.5px; border-radius: 40px; padding: 2px 9px; cursor: pointer; opacity: 0; transition: opacity .15s; display: inline-flex; gap: 4px; align-items: center; }
+  .sec:hover .regen-btn, .regen-btn:focus { opacity: 1; }
+  .regen-btn:hover { border-color: var(--iu-blue); color: var(--iu-blue); }
+  .fresh { font-size: 10.5px; font-weight: 700; color: var(--purple); background: #F3EAFB; border-radius: 40px; padding: 1px 8px; white-space: nowrap; animation: rise .3s ease-out; }
+  .blk { position: relative; }
+  .sheet p.txt { margin: 10px 0 0; font-size: 14.5px; line-height: 1.65; hyphens: auto; text-align: left; }
+  .mnote { position: absolute; left: -150px; top: 4px; width: 124px; font-size: 11.5px; line-height: 1.4; color: var(--iu-anthracite); border-top: 2px solid var(--iu-blue-soft); padding-top: 4px; }
+  .mnote b { display: block; color: var(--iu-black); }
+  .box { margin: 16px 0 4px; border-left: 4px solid var(--iu-blue-soft); background: #F5F8FF; padding: 10px 14px; border-radius: 0 6px 6px 0; }
+  .box .h { font-size: 11.5px; font-weight: 700; letter-spacing: .1em; color: #0E48C7; }
+  .box p.txt { margin-top: 4px; font-size: 14px; }
+  .box.praxis { border-left-color: var(--new-line); background: #F0FAF4; }
+  .box.praxis .h { color: var(--new-fg); }
+  .sheet-foot { margin-top: 26px; padding-top: 10px; border-top: 1px solid var(--iu-grey-light); font-size: 11.5px; color: var(--pending-fg); display: flex; justify-content: space-between; }
+
+  /* Figures — every AI image shares one template on purpose (see PM note) */
+  .fig { margin: 18px 0 6px; }
+  .fig-img { position: relative; border-radius: 8px; overflow: hidden; line-height: 0; animation: fadein .7s ease-out; }
+  .fig-img svg { width: 100%; height: auto; display: block; }
+  .ai-tag { position: absolute; top: 8px; left: 8px; line-height: 1.4; background: rgba(29,29,31,.66); color: #fff; font-size: 10.5px; font-weight: 500; padding: 2px 8px; border-radius: 40px; display: inline-flex; gap: 4px; align-items: center; }
+  .fig figcaption { font-size: 12px; color: var(--iu-anthracite); margin-top: 6px; }
+  .fig figcaption b { color: var(--iu-black); }
+  .fig-gen { height: 230px; border-radius: 8px; display: grid; place-items: center; font-size: 13px; color: #0E48C7; font-weight: 500;
+             background: linear-gradient(100deg, #EEF1F8 20%, #E3E9FF 40%, #F1E9FA 55%, #EEF1F8 75%); background-size: 250% 100%; animation: shim 1.6s linear infinite; }
+  .fig-gen span { display: inline-flex; gap: 6px; align-items: center; background: rgba(255,255,255,.8); padding: 4px 12px; border-radius: 40px; }
+
+  /* Generating shimmer */
+  .tail { margin-top: 14px; }
+  .tail .lab { font-size: 12px; font-weight: 700; color: #0E48C7; display: inline-flex; align-items: center; gap: 6px; margin-bottom: 8px; }
+  .shim { height: 10px; border-radius: 6px; margin: 9px 0; background: linear-gradient(100deg, #EEF0F3 20%, #DDE5FF 40%, #EFE6FA 55%, #EEF0F3 75%); background-size: 250% 100%; animation: shim 1.4s linear infinite; }
+  @keyframes shim { from { background-position: 125% 0; } to { background-position: -125% 0; } }
+  .caret { display: inline-block; width: 2px; height: 1.05em; background: var(--iu-blue); vertical-align: -2px; margin-left: 1px; animation: caret .8s steps(1) infinite; }
+  @keyframes caret { 50% { opacity: 0; } }
+  .sec.regen .sec-body { filter: blur(2.5px); opacity: .35; transition: filter .3s, opacity .3s; }
+  .sec.regen::after { content: "✦ Rewriting this section…"; position: absolute; left: 50%; top: 56px; transform: translateX(-50%); font-size: 12.5px; font-weight: 700; color: #0E48C7; background: #fff; border: 1px solid #C9D6FF; border-radius: 40px; padding: 5px 14px; box-shadow: var(--shadow-soft); white-space: nowrap; }
+  .sec.regen { background: linear-gradient(100deg, rgba(221,229,255,0) 20%, rgba(221,229,255,.9) 40%, rgba(239,230,250,.9) 55%, rgba(221,229,255,0) 75%); background-size: 250% 100%; animation: shim 1.4s linear infinite; }
+  .sec.just { animation: justfx 2.4s ease-out; }
+  @keyframes justfx { 0% { background: #F3EAFB; } 100% { background: transparent; } }
+
+  .sheet.rendering > * { opacity: 0; }
+  .sheet.rendering::after { content: ""; position: absolute; inset: 40px 48px; opacity: 1;
+     background: repeating-linear-gradient(180deg, transparent 0 14px, #fff 14px 26px), linear-gradient(100deg, #EEF0F3 20%, #DDE5FF 40%, #EFE6FA 55%, #EEF0F3 75%);
+     background-size: 100% 100%, 250% 100%; animation: shim 1.2s linear infinite; border-radius: 4px; }
+  .sheet > * { transition: opacity .6s; }
+  .sheet.queued { padding: 22px 28px; box-shadow: none; background: rgba(255,255,255,.55); border: 1px dashed var(--iu-grey); }
+  .sheet.queued .lk-eyebrow { color: var(--pending-fg); }
+  .sheet.queued h3 { font-size: 16px; color: var(--iu-anthracite); margin-top: 2px; }
+  .sheet.queued .meta { font-size: 12.5px; color: var(--pending-fg); margin-top: 6px; }
+  .sheet.queued .ghost { height: 8px; border-radius: 6px; background: #EDEEF0; margin: 8px 0; }
+
+  @keyframes rise { from { opacity: 0; transform: translateY(6px);} to { opacity: 1; transform: none; } }
+  @keyframes fadein { from { opacity: 0; } to { opacity: 1; } }
+
+  /* Right: chat (same component styling as the planning assistant) */
+  .chatcol { background: var(--surface); border-left: 1px solid var(--iu-grey-light); display: flex; flex-direction: column; min-height: 0; }
+  .as-head { padding: 18px 20px 14px; border-bottom: 1px solid var(--iu-grey-light); }
+  .as-title { display: flex; align-items: center; gap: 10px; }
+  .ai-mark { width: 34px; height: 34px; border-radius: 10px; background: linear-gradient(135deg, #3772FF, #652E98); color: #fff; display: grid; place-items: center; flex-shrink: 0; }
+  .as-title h2 { font-size: 16px; }
+  .as-title .tag { font-size: 12px; color: var(--iu-anthracite); }
+  .chat { flex: 1; overflow-y: auto; padding: 16px 20px; display: flex; flex-direction: column; gap: 12px; }
+  .msg { max-width: 88%; padding: 10px 14px; border-radius: 14px; font-size: 14px; line-height: 1.5; animation: rise .3s ease-out; }
+  .msg.ai { background: var(--surface-soft); border-bottom-left-radius: 4px; align-self: flex-start; }
+  .msg.me { background: var(--iu-blue); color: #fff; border-bottom-right-radius: 4px; align-self: flex-end; }
+  .msg .who { display: block; font-size: 11px; font-weight: 700; opacity: .7; margin-bottom: 2px; }
+  .msg ul { margin: 6px 0 0; padding-left: 18px; }
+  .msg .show { display: inline-flex; align-items: center; gap: 4px; margin-top: 8px; border: 1px solid var(--iu-blue); color: var(--iu-blue); background: #fff; border-radius: 40px; padding: 3px 10px; font-size: 12px; font-weight: 700; cursor: pointer; }
+  .msg .show:hover { background: #F5F8FF; }
+  .sys { align-self: center; font-size: 12px; color: var(--iu-anthracite); background: #fff; border: 1px solid var(--iu-grey-light); border-radius: 40px; padding: 3px 12px; animation: rise .3s ease-out; }
+  .typing { display: inline-flex; gap: 4px; padding: 12px 14px; }
+  .typing i { width: 6px; height: 6px; border-radius: 50%; background: var(--pending-fg); animation: blink 1s infinite; }
+  .typing i:nth-child(2) { animation-delay: .15s; } .typing i:nth-child(3) { animation-delay: .3s; }
+  @keyframes blink { 0%,100%{opacity:.25} 50%{opacity:1} }
+  .as-foot { border-top: 1px solid var(--iu-grey-light); padding: 12px 16px 14px; }
+  .suggest { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+  .suggest button { border: 1px solid var(--iu-grey); background: #fff; color: var(--iu-black); border-radius: 40px; padding: 4px 10px; font-size: 12.5px; cursor: pointer; }
+  .suggest button:hover { border-color: var(--iu-blue); color: var(--iu-blue); }
+  .suggest button[disabled] { opacity: .45; cursor: default; }
+  .composer { display: flex; gap: 8px; }
+  .composer input { flex: 1; min-width: 0; border: 1px solid var(--iu-grey); border-radius: var(--radius-sm); padding: 10px 12px; font: inherit; font-size: 14px; }
+  .composer input:focus { outline: 2px solid var(--iu-blue); outline-offset: -1px; border-color: transparent; }
+  .composer .btn { padding: 8px 12px; }
+  .foot-note { font-size: 11.5px; color: var(--pending-fg); margin-top: 8px; display: flex; justify-content: space-between; }
+  .replay { border: 0; background: none; color: var(--iu-blue); font-size: 11.5px; font-weight: 700; cursor: pointer; padding: 0; }
+
+  /* Bottom: handoff to Course Content Hub */
+  .handoff { flex-shrink: 0; background: var(--surface); box-shadow: 0 -6px 20px rgba(0,0,0,.08); padding: 12px 28px; display: flex; align-items: center; gap: 20px; position: relative; z-index: 20; }
+  .flow { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+  .flow .step { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; padding: 4px 12px; border-radius: 40px; background: var(--pending-bg); color: var(--pending-fg); white-space: nowrap; }
+  .flow .step.done { background: var(--new-bg); color: var(--new-fg); }
+  .flow .step.now { background: #fff; color: var(--iu-blue); box-shadow: inset 0 0 0 2px var(--iu-blue); font-weight: 700; }
+  .flow .step.cch { background: #fff; color: var(--iu-anthracite); box-shadow: inset 0 0 0 1px var(--iu-grey); }
+  .flow .arr { color: var(--iu-grey); }
+  .handoff .note { font-size: 13.5px; color: var(--iu-anthracite); flex: 1; min-width: 0; }
+  .handoff .note b { color: var(--iu-black); }
+
+  /* Toast */
+  .toast { position: fixed; left: 50%; top: 110px; transform: translate(-50%, -12px); opacity: 0; pointer-events: none; z-index: 90; background: var(--warn-bg); color: var(--warn-fg); padding: 12px 20px; border-radius: 6px; box-shadow: var(--shadow); font-size: 14px; transition: all .25s; }
+  .toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+  /* ---------- PM view: annotation layer ---------- */
+  .pm-layer { position: fixed; inset: 0; pointer-events: none; z-index: 60; display: none; }
+  body.pm .pm-layer { display: block; }
+  .pm-pin { position: fixed; width: 24px; height: 24px; margin: -12px 0 0 -12px; border-radius: 50%; background: var(--pm-fg); color: #fff; font-size: 12px; font-weight: 700; display: grid; place-items: center; box-shadow: 0 0 0 4px rgba(116,18,77,.18); pointer-events: auto; cursor: pointer; }
+  .pm-note { position: fixed; width: 292px; background: var(--pm-bg); border: 1px solid var(--pm-soft); border-left: 4px solid var(--pm-fg); border-radius: 4px 8px 8px 4px; padding: 9px 12px 10px; font-size: 12.5px; line-height: 1.45; color: #3E0A2A; box-shadow: 0 10px 24px rgba(116,18,77,.18); pointer-events: auto; transform: rotate(-.35deg); }
+  .pm-note .h { display: flex; align-items: center; gap: 6px; font-size: 10.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--pm-fg); margin-bottom: 3px; }
+  .pm-note .h .x { margin-left: auto; border: 0; background: none; color: var(--pm-fg); cursor: pointer; font-size: 14px; line-height: 1; padding: 0 2px; }
+  .pm-note b { color: var(--pm-fg); }
+  .pm-note .hl { font-weight: 700; color: var(--pm-fg); font-size: 13px; line-height: 1.35; margin: 2px 0 6px; }
+  .pm-note .q { margin: 6px 0 0; padding-left: 9px; border-left: 2px solid var(--pm-soft); font-style: italic; }
+  .pm-note .q cite { display: block; font-style: normal; font-size: 11px; font-weight: 700; color: var(--pm-line); margin-top: 1px; }
+  .pm-note .sup { margin-top: 7px; }
+  .pm-note .refs { display: block; margin-top: 6px; font-size: 10.5px; color: var(--pm-line); }
+  .pm-note.obs { background: #F7F7F8; border: 1px dashed #A6ABAF; border-left: 4px dashed var(--iu-anthracite); color: var(--iu-black); box-shadow: 0 8px 18px rgba(0,0,0,.10); }
+  .pm-note.obs .h { color: var(--iu-anthracite); }
+  .pm-note.obs .h .x { color: var(--iu-anthracite); }
+  .pm-pin.obs { background: var(--iu-anthracite); box-shadow: 0 0 0 4px rgba(87,94,98,.18); }
+  .pm-note.min { display: none; }
+  .pm-note .jump { display: none; margin-top: 8px; border: 1px solid var(--iu-anthracite); background: #fff; color: var(--iu-anthracite); font-size: 11.5px; font-weight: 700; border-radius: 40px; padding: 2px 10px; cursor: pointer; }
+  .pm-note .jump.show { display: inline-flex; }
+  .pm-note .jump:hover { color: var(--iu-black); border-color: var(--iu-black); }
+  body.pm .pm-target { outline: 2px dashed var(--pm-line); outline-offset: 3px; }
+  body.pm .fig-img { outline: 2px dashed var(--pm-line); outline-offset: 3px; }
+  body.pm .fig-img::after { content: "same template"; position: absolute; right: 8px; bottom: 8px; line-height: 1.4; font-size: 10.5px; font-weight: 700; color: #fff; background: var(--pm-fg); border-radius: 40px; padding: 2px 8px; }
+
+  /* ---------- Responsive (desktop-first) ---------- */
+  @media (max-width: 1320px) {
+    .cockpit { grid-template-columns: 268px minmax(0, 1fr) 336px; }
+    .sheet { padding: 36px 36px 20px; }
+    .sheet-body { padding-left: 0; }
+    .mnote { position: static; width: auto; float: right; max-width: 170px; margin: 4px 0 6px 14px; }
+    .flow .step:not(.now):not(.cch) { display: none; }
+    .flow .arr:first-of-type { display: none; }
+    .course-id .eyebrow { display: none; }
+  }
+  @media (max-width: 1060px) {
+    body { overflow: auto; height: auto; }
+    .cockpit { grid-template-columns: 1fr; }
+    .col-scroll { overflow: visible; }
+    .chatcol { height: 640px; }
+    .handoff { flex-wrap: wrap; }
+    .st-progress { width: 160px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="mock-banner">MOCKUP — not functional, for illustration only.</div>
+<header class="topbar">
+  <img src="../assets/f1a8a57a3a249a21.png" alt="IU International University of Applied Sciences">
+  <div class="course-id">
+    <div class="eyebrow">Large Revision · Course</div>
+    <div class="name">Grundlagen der Neueren deutschen Literaturwissenschaft <span class="code">(DLBAGRMGNDL01)</span></div>
+  </div>
+  <span class="mode" title="Option 1 of the Large Revision workflow">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3l1.8 4.9L19 9.7l-4.2 3 1.4 5.3L12 15l-4.2 3 1.4-5.3L5 9.7l5.2-1.8z" fill="currentColor"/></svg>
+    AI Full Rewrite
+  </span>
+  <div class="top-right">
+    <label class="pm-toggle" id="pmToggle" title="Show product-management annotations">
+      <span class="switch" aria-hidden="true"></span> PM view
+    </label>
+    <div class="avatar" title="Module owner (MV)">SW</div>
+  </div>
+</header>
+
+<!-- PM view evidence banner — headline finding from "Main Outputs from MVs — Discoveries & Testing" (06/25, 04/26, 05/26).
+     All MV attributions on this screen are anonymous by design. -->
+<div class="pm-bar" role="note">
+  <span class="pm-kicker">MV evidence</span>
+  <span class="thesis">Across discovery and testing, the evidence supports <b>professor-led revision with targeted AI assistance</b> more clearly than fully automated revision. MVs want <b>less administrative work — not less control over academic decisions.</b>
+    <span class="src-line">Source: “Main Outputs from MVs — Discoveries &amp; Testing” (06/25, 04/26, 05/26).</span></span>
+</div>
+
+<main class="cockpit">
+  <!-- ================= LEFT: generation parameters ================= -->
+  <aside class="params col-scroll" aria-label="Generation settings">
+    <h2>Set the frame</h2>
+    <p class="lead">You decide the direction. The AI writes the new book, and you watch it take shape.</p>
+
+    <div class="p-block" id="lengthBlock">
+      <div class="p-label">Target length <b id="lenVal">~200 pages</b></div>
+      <input type="range" id="len" min="150" max="250" step="10" value="200" aria-label="Target length in pages">
+      <div class="range-scale"><span>150</span><span>200</span><span>250</span></div>
+      <div class="p-hint">Your current book has <b>262 pages</b>. The AI stays within ±20 pages of your target.</div>
+    </div>
+
+    <div class="p-block" id="sourcesBlock">
+      <div class="p-label">What the AI works from</div>
+      <!-- Real inputs would be resolved from the course version, the module description (DLBAGRMGNDL) and platform-level frameworks -->
+      <div class="sources">
+        <div class="src-chip"><svg class="lock" width="13" height="13" viewBox="0 0 24 24" fill="none"><rect x="5" y="11" width="14" height="10" rx="2" stroke="currentColor" stroke-width="2"/><path d="M8 11V8a4 4 0 118 0v3" stroke="currentColor" stroke-width="2"/></svg><span>Current course book <small>· 262 pages</small></span><span class="on">on</span></div>
+        <div class="src-chip"><svg class="lock" width="13" height="13" viewBox="0 0 24 24" fill="none"><rect x="5" y="11" width="14" height="10" rx="2" stroke="currentColor" stroke-width="2"/><path d="M8 11V8a4 4 0 118 0v3" stroke="currentColor" stroke-width="2"/></svg><span>Module description <small>· 4 course goals</small></span><span class="on">on</span></div>
+        <div class="src-chip"><svg class="lock" width="13" height="13" viewBox="0 0 24 24" fill="none"><rect x="5" y="11" width="14" height="10" rx="2" stroke="currentColor" stroke-width="2"/><path d="M8 11V8a4 4 0 118 0v3" stroke="currentColor" stroke-width="2"/></svg><span>Job-Readiness framework</span><span class="on">on</span></div>
+        <div class="src-chip"><svg class="lock" width="13" height="13" viewBox="0 0 24 24" fill="none"><rect x="5" y="11" width="14" height="10" rx="2" stroke="currentColor" stroke-width="2"/><path d="M8 11V8a4 4 0 118 0v3" stroke="currentColor" stroke-width="2"/></svg><span>Constructive Alignment</span><span class="on">on</span></div>
+      </div>
+      <div class="p-hint">These are always on. They keep the new book in line with the course goals.</div>
+    </div>
+
+    <div class="p-block" id="knobsBlock">
+      <div class="p-label">How it should read</div>
+      <div class="knob">
+        <div class="knob-name">Reading level</div>
+        <div class="seg" data-knob="Reading level"><button>Academic</button><button class="on">Balanced</button><button>Easy-going</button></div>
+      </div>
+      <div class="knob">
+        <div class="knob-name">How much to change</div>
+        <div class="seg" data-knob="How much to change"><button>Light touch</button><button>Moderate</button><button class="on">Full rewrite</button></div>
+      </div>
+      <div class="knob">
+        <div class="knob-name">Images</div>
+        <div class="seg" data-knob="Images" id="imgSeg"><button>Few</button><button class="on">Some</button><button>Many</button></div>
+      </div>
+      <div class="knob">
+        <div class="knob-name">Your focus <span style="font-weight:400;color:var(--iu-anthracite);font-size:12px">· from the chat</span></div>
+        <span class="focus-chip" id="focusChip">✦ Waiting for your instructions</span>
+      </div>
+    </div>
+
+    <div class="p-block">
+      <button class="btn btn-primary btn-block" id="genBtn">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3l1.8 4.9L19 9.7l-4.2 3 1.4 5.3L12 15l-4.2 3 1.4-5.3L5 9.7l5.2-1.8z" fill="currentColor"/></svg>
+        Generate new book
+      </button>
+      <div class="p-hint" style="text-align:center">Takes about 45 minutes. You can keep steering while it writes.</div>
+      <div class="tip">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style="flex-shrink:0;margin-top:1px"><path d="M4 12a8 8 0 0114-5.3M20 12a8 8 0 01-14 5.3M18 3v4h-4M6 21v-4h4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span>Only one part isn't right? Hover over any section in the book and click <b>Regenerate</b>.</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ================= CENTER: the living book ================= -->
+  <section class="canvas col-scroll" id="canvas" aria-label="New course book (live preview)">
+    <div class="status" id="status">
+      <div class="status-row">
+        <div class="st-live" id="stLive">
+          <span class="live-dot" id="liveDot"></span>
+          <div class="st-text">
+            <div class="t1" id="st1">Getting ready…</div>
+            <div class="t2" id="st2">Reading your current book and the module description</div>
+          </div>
+        </div>
+        <div class="st-progress" id="stProgress">
+          <div class="lbl"><span>New book</span><span><b id="pgNow">0</b> of <span id="pgTarget">~200</span> pages</span></div>
+          <div class="bar"><i id="pgBar"></i></div>
+          <div class="lbl" style="margin-top:3px"><span>Old book: 262 pages</span><span id="eta">about 45 min left</span></div>
+        </div>
+      </div>
+      <div class="chips" id="uchips"></div>
+    </div>
+    <!-- Real version: the book stream would come from the generation job (per-section events) -->
+    <div class="book" id="book"></div>
+  </section>
+
+  <!-- ================= RIGHT: AI agent chat ================= -->
+  <aside class="chatcol" aria-label="AI book writer">
+    <div class="as-head">
+      <div class="as-title">
+        <div class="ai-mark" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 3l1.8 4.9L19 9.7l-4.2 3 1.4 5.3L12 15l-4.2 3 1.4-5.3L5 9.7l5.2-1.8z" fill="currentColor"/></svg></div>
+        <div>
+          <h2>AI Book Writer</h2>
+          <div class="tag">Tell it what you want in plain words. It rewrites; you review.</div>
+        </div>
+      </div>
+    </div>
+    <div class="chat" id="chat" aria-live="polite"></div>
+    <div class="as-foot">
+      <div class="suggest" id="suggest">
+        <button data-s="short" disabled>Make it shorter, around 180 pages</button>
+        <button data-s="publishing" disabled>More examples from publishing</button>
+        <button data-s="fewer" disabled>Use fewer images</button>
+      </div>
+      <form class="composer" id="composer">
+        <input id="chatInput" placeholder="e.g. “Make Lektion 5 less dense”" autocomplete="off" aria-label="Message to the AI book writer">
+        <button class="btn btn-primary" type="submit" aria-label="Send"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M4 12l16-8-6 16-2-7-8-1z" fill="currentColor"/></svg></button>
+      </form>
+      <div class="foot-note"><span>Mockup: replies are pre-written.</span><button class="replay" id="replay">↺ Replay demo</button></div>
+    </div>
+  </aside>
+</main>
+
+<!-- ================= PM VIEW: evidence base (footer) ================= -->
+<section class="pm-evidence" aria-label="Evidence base">
+  <div class="ev-group">
+    <span class="ev-h">Source sessions</span>
+    <span class="ev-chip session">06/25 · Revision-process discovery</span>
+    <span class="ev-chip session">04/26 · Course Content Hub user testing</span>
+    <span class="ev-chip session">05/26 · Writing-process &amp; AI discovery</span>
+  </div>
+  <div class="ev-group">
+    <span class="ev-h">Documented MV needs <small>(from MV interviews)</small></span>
+    <span class="ev-chip">Direct editing &amp; simpler publication</span>
+    <span class="ev-chip">AI with accept/reject control</span>
+    <span class="ev-chip">Subject-qualified review, no unnecessary delays</span>
+    <span class="ev-chip">Measure time saved after verification</span>
+    <span class="ev-chip">Workflow visibility &amp; reliable editing</span>
+  </div>
+</section>
+
+<!-- ================= BOTTOM: handoff to Course Content Hub ================= -->
+<footer class="handoff" id="handoff">
+  <div class="flow" aria-label="Where you are">
+    <span class="step done">✓ Set the frame</span><span class="arr">›</span>
+    <span class="step now" id="flowNow">AI writes · you steer</span><span class="arr">›</span>
+    <span class="step cch">Final point edits in Course Content Hub</span>
+  </div>
+  <div class="note"><b>When you're happy</b> → open the new book in Course Content Hub for final point edits. From there, the current flow continues as today.</div>
+  <!-- Real version: enabled when generation is complete; creates the new course version in CCH/Fonto -->
+  <button class="btn btn-primary" id="cchBtn" disabled title="Available when the new book is finished">Open in Course Content Hub →</button>
+</footer>
+
+<div class="pm-layer" id="pmLayer" aria-hidden="true"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* =====================================================================
+   HARD-CODED BOOK DATA
+   Real version: generated per section by the rewrite job from
+   old book + module description + Job-Readiness + Constructive Alignment.
+   Titles/objectives are from DLBAGRMGNDL01 (v001) and DLBAGRMGNDL; body text is a canned "AI rewrite".
+   ===================================================================== */
+const UNITS = [
+  { n: 1, title: "Einführung in die Neuere deutsche Literaturwissenschaft", pages: [11, 28], est: 18, oldPages: 14,
+    objectives: [
+      "den historischen und methodischen Unterschied zwischen der Älteren und Neueren deutschen Literaturwissenschaft zu erklären.",
+      "die wesentlichen Entwicklungen zu beschreiben, die zur Etablierung des Deutschen als Literatursprache beigetragen haben.",
+      "die Entstehung der Neueren deutschen Literaturwissenschaft als Disziplin in ihrem historischen Kontext zu analysieren.",
+      "an einem Praxisbeispiel zu zeigen, wie digitale Medien den Umgang mit Literatur heute verändern."
+    ],
+    sections: [
+      { title: "Einführung", blocks: [
+        { t: "p", x: "Literatur fasziniert seit Jahrhunderten, weil sie uns allein mit der Kraft ihrer Sprache in andere Welten entführt. Heute begegnet sie uns nicht nur im gedruckten Buch, sondern ebenso im E-Book, im Podcast, auf Social-Media-Plattformen – und zunehmend in Texten, die mit Unterstützung künstlicher Intelligenz entstehen." },
+        { t: "p", x: "Genau hier setzt die Literaturwissenschaft an: Sie fragt, wie Texte gemacht sind, in welchen Kontexten sie entstehen und wie sie auf Leserinnen und Leser wirken. In dieser Lektion lernst Du, woher das Fach kommt – und warum seine Werkzeuge heute in Verlagen, Redaktionen und Kulturinstitutionen gefragt sind." }
+      ]},
+      { title: "1.1 Geschichte und Entwicklung des Fachs", blocks: [
+        { t: "p", x: "Die Neuere deutsche Literaturwissenschaft zählt – neben der Sprachwissenschaft und der Älteren deutschen Literatur – zu den drei traditionellen Teildisziplinen der Germanistik. Sie beschäftigt sich mit deutschsprachiger Literatur von der Frühen Neuzeit bis zur Gegenwart." },
+        { t: "fig", m: "timeline", cap: "Abbildung 1: Zeitstrahl Ältere und Neuere deutsche Literatur" },
+        { t: "p", mn: ["Buchdruck", "mechanische Vervielfältigung von Texten mit beweglichen Lettern, ab ca. 1440"], x: "Ein Schlüsselmoment ist der Buchdruck: Johannes Gutenberg revolutionierte um 1440 die Verbreitung von Wissen. Was damals die Druckerpresse war, sind heute digitale Plattformen – beide verändern, wer schreibt, wer liest und wie Texte zirkulieren." },
+        { t: "box", k: "praxis", h: "PRAXISBEISPIEL", x: "Vergleiche die Erstausgabe eines Romans mit seiner heutigen E-Book-Fassung: Was ist gleich geblieben, was hat sich verändert – vom Cover bis zur Leseführung?" }
+      ]},
+      { title: "1.2 Eine Wissenschaftsdisziplin entsteht", blocks: [
+        { t: "p", x: "Im 19. Jahrhundert etabliert sich die Germanistik als Universitätsfach. Philologen wie Jacob und Wilhelm Grimm sammeln, edieren und kommentieren Texte – eine Arbeit, die heute in digitalen Editionen und frei zugänglichen Textdatenbanken fortgeführt wird." }
+      ]}
+    ]
+  },
+  { n: 2, title: "Grundbegriffe der Literaturwissenschaft", pages: [29, 56], est: 28, oldPages: 26,
+    objectives: [
+      "die Begriffe „Text“, „Literatur“ und „Autorschaft“ zu definieren und deren Entwicklung zu skizzieren.",
+      "zwischen den Konzepten „Fiktionalität“ und „Literarizität“ zu unterscheiden.",
+      "den erweiterten Textbegriff und die Auswirkungen digitaler Medien und KI auf die Literaturwissenschaft zu beschreiben.",
+      "grundlegende rhetorische Mittel zu identifizieren und deren Wirkung zu analysieren."
+    ],
+    sections: [
+      { title: "2.1 Text, Literatur und Autorschaft",
+        blocks: [
+          { t: "p", x: "Der Textbegriff, etymologisch auf das lateinische textus (‚Gewebe‘) zurückgehend, bezeichnet in literaturwissenschaftlicher Perspektive ein kohärentes, intentional strukturiertes Zeichengefüge, dessen Bedeutung sich erst im Zusammenspiel von Produktion, Distribution und Rezeption konstituiert." },
+          { t: "box", k: "def", h: "DEFINITIONSBOX", x: "Literarizität bezeichnet die Gesamtheit jener formal-ästhetischen Merkmale, die einen Text als literarischen ausweisen; Fiktionalität hingegen betrifft den pragmatischen Status des Dargestellten." },
+          { t: "p", x: "Mit Roland Barthes’ These vom ‚Tod des Autors‘ (1967) und Michel Foucaults Frage ‚Was ist ein Autor?‘ (1969) wird die Instanz des Autors als Garant textueller Bedeutung grundlegend problematisiert; KI-gestützte Textproduktion radikalisiert diese Debatte, indem sie Urheberschaft auf ein sozio-technisches Gefüge verlagert." },
+          { t: "fig", m: "author", cap: "Abbildung 2: Autorschaft zwischen Mensch und Maschine" }
+        ],
+        // Canned "more like the intro" rewrite — swapped in by the chat or the Regenerate button
+        alt: [
+          { t: "p", x: "Was ist eigentlich ein Text? Das Wort kommt vom lateinischen textus – ‚Gewebe‘. Und genau so kannst Du Dir einen Text vorstellen: als etwas Gewebtes, in dem Wörter, Sätze und Bedeutungen miteinander verknüpft sind. Ob ein Text ‚Literatur‘ ist, hängt nicht nur vom Inhalt ab, sondern davon, wie er gemacht ist – und wie wir ihn lesen." },
+          { t: "box", k: "def", h: "DEFINITIONSBOX", x: "Literarizität: das, was einen Text „literarisch“ macht – etwa Klang, Bilder, Aufbau. Fiktionalität: Der Text erzählt etwas Erfundenes und wir wissen das." },
+          { t: "p", x: "Wer hat einen Text geschrieben – und spielt das überhaupt eine Rolle? Roland Barthes sprach 1967 provokant vom ‚Tod des Autors‘: Die Bedeutung entstehe beim Lesen. Heute stellt sich die Frage ganz praktisch neu: Wenn ein Roman mit Hilfe eines KI-Tools entsteht, wer ist dann der Autor?" },
+          { t: "fig", m: "author", cap: "Abbildung 2: Autorschaft zwischen Mensch und Maschine" }
+        ]
+      },
+      { title: "2.2 Rhetorik, Poetik und Ästhetik",
+        blocks: [
+          { t: "p", x: "Die Rhetorik als ars bene dicendi systematisiert seit der Antike die Mittel der persuasiven Rede, während Poetik und Ästhetik die Bedingungen literarischer Produktion normativ beziehungsweise deskriptiv reflektieren und dabei den Zusammenhang von Form, Wirkung und Urteil theoretisch fassen." }
+        ],
+        alt: [
+          { t: "p", x: "Rhetorik ist die Kunst, wirkungsvoll zu sprechen und zu schreiben. Metapher, Alliteration oder rhetorische Frage kennst Du aus Werbung und politischen Reden – dieselben Mittel findest Du in Gedichten und Romanen." },
+          { t: "box", k: "praxis", h: "PRAXISBEISPIEL", x: "Lass ein KI-Tool einen kurzen Werbetext schreiben und markiere alle rhetorischen Mittel, die Du findest. Welche wirken, welche wirken gewollt?" }
+        ]
+      }
+    ]
+  },
+  { n: 3, title: "Theorien und Methoden der Literaturwissenschaft", pages: [57, 88], est: 32, oldPages: 20,
+    objectives: [
+      "die Bedeutung literaturwissenschaftlicher Methoden für die Textanalyse und -interpretation darzulegen.",
+      "textorientierte, autororientierte, leserorientierte sowie kontextorientierte Ansätze zu unterscheiden.",
+      "die Einsatzmöglichkeiten digitaler und KI-gestützter Forschungsmethoden zu erläutern und selbst auszuprobieren.",
+      "die Editionsphilologie als Methode zur Textbearbeitung und -rekonstruktion zu beschreiben."
+    ],
+    sections: [
+      { title: "3.1 Literaturwissenschaftliche Ansätze", blocks: [
+        { t: "p", x: "Literaturwissenschaftliche Methoden helfen Dir, Texte nicht nur zu lesen, sondern systematisch zu analysieren. Im Mittelpunkt steht die Frage nach dem „Wie“ und „Warum“: Wie ist ein Text gebaut – und warum wirkt er so, wie er wirkt?" },
+        { t: "p", x: "Grob lassen sich vier Zugänge unterscheiden: textorientierte Ansätze wie der Strukturalismus, autororientierte Ansätze wie die Biografik, leserorientierte Ansätze wie die Rezeptionsästhetik und kontextorientierte Ansätze wie der New Historicism." }
+      ]},
+      { title: "3.2 Digitale Forschungsmethoden", blocks: [
+        { t: "p", x: "Der zunehmende Einsatz digitaler Forschungsmethoden spiegelt eine grundlegende Veränderung im Umgang mit Texten wider. Digitale Verfahren erweitern das Methodenspektrum um quantitative und algorithmisch gestützte Werkzeuge, mit denen sich große Textkorpora untersuchen lassen." },
+        { t: "p", mn: ["Distant Reading", "große Textmengen werden computergestützt quantitativ analysiert"], x: "Ein bekanntes Beispiel ist das „Distant Reading“ nach Franco Moretti: Statt einen Roman genau zu lesen, werden Tausende Romane gleichzeitig ausgewertet – etwa nach Häufigkeiten von Wörtern, Themen oder Figuren. So werden Muster sichtbar, die bei der herkömmlichen Lektüre verborgen bleiben." },
+        { t: "fig", m: "network", cap: "Abbildung 3: Distant Reading – viele Texte auf einen Blick" },
+        { t: "p", x: "Große Sprachmodelle gehen noch einen Schritt weiter: Sie können Figurenkonstellationen extrahieren, Themen clustern oder Stilmerkmale verschiedener Epochen vergleichen. Für Deine Praxis heißt das: Du kannst in kurzer Zeit Hypothesen bilden – musst sie aber mit genauer Lektüre prüfen." },
+        { t: "box", k: "praxis", h: "PROBIER ES AUS", x: "Lade drei Gedichte der Romantik in Voyant Tools und vergleiche die häufigsten Wörter. Welche Motive fallen Dir auf – und welche hättest Du auch ohne Werkzeug gefunden?" }
+      ]},
+      { title: "3.3 Editionsphilologie und Textkritik", blocks: [
+        { t: "p", x: "Welche Fassung eines Textes lesen wir eigentlich? Die Editionsphilologie rekonstruiert Texte aus Handschriften, Drucken und Varianten. Digitale Editionen machen diese Arbeit heute für alle sichtbar – mit einem Klick zwischen Fassungen wechseln." },
+        { t: "fig", m: "press", cap: "Abbildung 4: Von der Handschrift zur digitalen Edition" }
+      ]}
+    ]
+  },
+  { n: 4, title: "Literarische Gattungen", pages: [89, 142], est: 54, oldPages: 82, endless: true,
+    objectives: [
+      "die Hauptmerkmale der wesentlichen literarischen Gattungen zu benennen.",
+      "die historische Entwicklung der wesentlichen literarischen Gattungen zu erläutern.",
+      "Formen der digitalen Literatur und deren Einfluss zu erklären.",
+      "das Hörspiel und literarische Gebrauchsformen zu definieren."
+    ],
+    sections: [
+      { title: "4.1 Einführung in die Gattungstheorie", blocks: [
+        { t: "p", x: "Warum berührt uns ein Gedicht auf eine andere Weise als ein Roman? Und wie schafft es ein Theaterstück, auf wenigen Seiten eine ganze Welt zu entfalten? Die klassische Gattungstheorie unterscheidet drei Hauptgattungen: Lyrik, Epik und Drama." }
+      ]}
+    ]
+  },
+  { n: 5, title: "Eine kurze Geschichte der deutschsprachigen Literatur", pages: [143, 180], est: 38, oldPages: 56, sections: [] },
+  { n: 6, title: "Berufsbilder für Literaturwissenschaftlerinnen und Literaturwissenschaftler", pages: [181, 200], est: 20, oldPages: 22, sections: [] }
+];
+const TARGET_DEFAULT = 200;
+
+/* =====================================================================
+   AI IMAGES — one shared template on purpose (the PM note is about exactly this).
+   Real version: image model output placed by the rewrite job.
+   ===================================================================== */
+function aiImage(motif) {
+  const line = 'stroke="#2B3845" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none"';
+  const motifs = {
+    timeline: `<path d="M70 170 H430" ${line}/><circle cx="110" cy="170" r="9" fill="#fff" ${line}/><circle cx="200" cy="170" r="9" fill="#fff" ${line}/><circle cx="290" cy="170" r="9" fill="#2B3845"/><circle cx="380" cy="170" r="9" fill="#fff" ${line}/>
+               <path d="M92 132 q18 -22 36 0 v-40 q-18 -22 -36 0z" fill="#fff" ${line}/><rect x="270" y="88" width="40" height="52" rx="4" fill="#fff" ${line}/><path d="M278 102 h24 M278 114 h24 M278 126 h16" ${line}/><path d="M362 96 h36 v44 h-36z M366 104 h28" fill="#fff" ${line}/>`,
+    author:   `<circle cx="165" cy="105" r="36" fill="#fff" ${line}/><path d="M110 200 q55 -70 110 0" fill="#fff" ${line}/><rect x="290" y="80" width="70" height="70" rx="10" fill="#fff" ${line}/><rect x="306" y="96" width="38" height="38" rx="4" fill="#2B3845"/>
+               <path d="M290 98 h-12 M290 115 h-12 M290 132 h-12 M360 98 h12 M360 115 h12 M360 132 h12 M308 80 v-12 M325 80 v-12 M342 80 v-12" ${line}/><path d="M205 112 q45 -30 80 -2" ${line} stroke-dasharray="2 9"/>`,
+    network:  `<path d="M120 90 L200 140 L300 80 L380 150 M200 140 L240 200 L300 80 M120 90 L240 200" ${line}/><circle cx="120" cy="90" r="11" fill="#fff" ${line}/><circle cx="200" cy="140" r="11" fill="#fff" ${line}/><circle cx="300" cy="80" r="13" fill="#2B3845"/><circle cx="380" cy="150" r="11" fill="#fff" ${line}/><circle cx="240" cy="200" r="11" fill="#fff" ${line}/>
+               <path d="M400 210 v-30 M416 210 v-48 M432 210 v-20" ${line}/>`,
+    press:    `<path d="M100 200 v-100 q0 -14 14 -14 h70 v114z" fill="#fff" ${line}/><path d="M118 110 h48 M118 126 h48 M118 142 h36 M118 158 h44" ${line}/><path d="M205 150 h60" ${line}/><path d="M252 138 l14 12 -14 12" ${line}/>
+               <rect x="290" y="84" width="120" height="100" rx="8" fill="#fff" ${line}/><path d="M290 104 h120" ${line}/><circle cx="302" cy="94" r="3" fill="#2B3845"/><path d="M308 124 h44 M308 140 h84 M308 156 h60" ${line}/>`
+  };
+  // shared template: same palette, same backdrop, same sun, same horizon — every image
+  return `<svg viewBox="0 0 500 240" role="img" aria-label="AI-generated illustration">
+    <defs><linearGradient id="bg-${motif}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#E6EDFF"/><stop offset="1" stop-color="#F3EAFB"/></linearGradient>
+    <linearGradient id="sun-${motif}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3772FF"/><stop offset="1" stop-color="#652E98"/></linearGradient></defs>
+    <rect width="500" height="240" fill="url(#bg-${motif})"/>
+    <circle cx="410" cy="62" r="74" fill="url(#sun-${motif})" opacity=".22"/><circle cx="84" cy="220" r="96" fill="#80A2F2" opacity=".18"/>
+    <path d="M0 214 Q250 186 500 214 V240 H0z" fill="#fff" opacity=".6"/>
+    ${motifs[motif] || motifs.network}
+  </svg>`;
+}
+const AI_TAG = '<span class="ai-tag"><svg width="10" height="10" viewBox="0 0 24 24"><path d="M12 3l1.8 4.9L19 9.7l-4.2 3 1.4 5.3L12 15l-4.2 3 1.4-5.3L5 9.7l5.2-1.8z" fill="currentColor"/></svg>AI-generated</span>';
+
+/* =====================================================================
+   RENDERING
+   ===================================================================== */
+const $ = (s, r = document) => r.querySelector(s);
+const book = $('#book'), canvas = $('#canvas'), chat = $('#chat');
+const esc = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;');
+const state = UNITS.map(() => 'queued');
+const typed = UNITS.map(() => 0);           // chars written for page-count estimate
+const totalChars = UNITS.map(u => u.sections.reduce((a, s) => a + s.blocks.reduce((b, x) => b + (x.x ? x.x.length : 400), 0), 0) || 1);
+let target = TARGET_DEFAULT;
+
+function figHTML(b) {
+  return `<figure class="fig"><div class="fig-img">${aiImage(b.m)}${AI_TAG}</div><figcaption><b>${esc(b.cap)}</b> · Quelle: KI-generiert, 2026.</figcaption></figure>`;
+}
+function blockHTML(b) {
+  if (b.t === 'fig') return figHTML(b);
+  const mn = b.mn ? `<aside class="mnote"><b>${esc(b.mn[0])}</b>${esc(b.mn[1])}</aside>` : '';
+  if (b.t === 'box') return `<div class="blk box ${b.k === 'praxis' ? 'praxis' : ''}"><div class="h">${b.h}</div><p class="txt">${esc(b.x)}</p></div>`;
+  return `<div class="blk">${mn}<p class="txt">${esc(b.x)}</p></div>`;
+}
+function secEl(u, si) {
+  const s = u.sections[si];
+  const el = document.createElement('div');
+  el.className = 'sec'; el.dataset.u = u.n; el.dataset.s = si;
+  el.innerHTML = `<div class="sec-h"><h3>${esc(s.title)}</h3><button class="regen-btn" title="Rewrite only this section">↻ Regenerate</button></div><div class="sec-body"></div>`;
+  return el;
+}
+function sheetShell(u, mode) {
+  const el = document.createElement('article');
+  el.className = 'sheet'; el.id = 'unit-' + u.n;
+  el.innerHTML = `
+    <span class="sheet-tag ${mode === 'writing' ? 'tag-writing' : 'tag-done'}">${mode === 'writing' ? '✦ Writing…' : '✓ Written by AI · ' + u.est + ' pages'}</span>
+    <div class="lk-eyebrow">LEKTION ${u.n}</div>
+    <h2 class="lk-title">${esc(u.title)}</h2>
+    <div class="objectives"><div class="h">LERNZIELE</div><p>Nach der Bearbeitung dieser Lektion wirst Du in der Lage sein, …</p><ul>${u.objectives.map(o => `<li>${esc(o)}</li>`).join('')}</ul></div>
+    <div class="sheet-body"></div>
+    <div class="sheet-foot"><span>DLBAGRMGNDL01 · new edition · draft</span><span>S. ${u.pages[0]}–${u.pages[1]}</span></div>`;
+  return el;
+}
+function queuedEl(u) {
+  const el = document.createElement('article');
+  el.className = 'sheet queued'; el.id = 'unit-' + u.n;
+  el.innerHTML = `<div class="lk-eyebrow">LEKTION ${u.n} · QUEUED</div><h3>${esc(u.title)}</h3>
+    <div class="ghost" style="width:92%"></div><div class="ghost" style="width:78%"></div><div class="ghost" style="width:60%"></div>
+    <div class="meta">~${u.est} pages planned · rewritten from ${u.oldPages} pages in the current book</div>`;
+  return el;
+}
+function fullSheet(u) {
+  const el = sheetShell(u, 'done');
+  const body = $('.sheet-body', el);
+  u.sections.forEach((s, si) => { const se = secEl(u, si); $('.sec-body', se).innerHTML = s.blocks.map(blockHTML).join(''); body.appendChild(se); });
+  return el;
+}
+function renderChips() {
+  $('#uchips').innerHTML = UNITS.map((u, i) =>
+    `<button class="uchip ${state[i]}" data-go="${u.n}">${state[i] === 'done' ? '✓' : state[i] === 'writing' ? '●' : '○'} Lektion ${u.n}</button>`).join('') +
+    `<button class="follow" id="followBtn">↓ Follow the live writing</button>`;
+  $('#followBtn').classList.toggle('show', !follow && state.includes('writing'));
+}
+function updatePages() {
+  let p = 0;
+  UNITS.forEach((u, i) => { if (state[i] === 'done') p += u.est; else if (state[i] === 'writing') p += Math.round(u.est * Math.min(1, typed[i] / totalChars[i]) * (u.endless ? .12 : 1)); });
+  p = Math.round(p * target / TARGET_DEFAULT);
+  $('#pgNow').textContent = p;
+  $('#pgBar').style.width = Math.min(100, p / target * 100) + '%';
+  const left = Math.max(5, Math.round(45 * (1 - p / target) / 5) * 5);
+  $('#eta').textContent = 'about ' + left + ' min left';
+}
+function setStatus(t1, t2, live = true) {
+  $('#st1').textContent = t1; $('#st2').textContent = t2;
+  $('#liveDot').classList.toggle('idle', !live);
+}
+
+/* ---------- follow-along scrolling ---------- */
+let follow = true;
+function keepInView(el) {
+  if (!follow || !el) return;
+  const c = canvas.getBoundingClientRect(), r = el.getBoundingClientRect();
+  if (r.bottom > c.bottom - 90) canvas.scrollTop += r.bottom - (c.bottom - 90);
+}
+['wheel', 'touchmove'].forEach(ev => canvas.addEventListener(ev, () => { if (follow) { follow = false; renderChips(); } }, { passive: true }));
+
+/* =====================================================================
+   CANNED GENERATION ENGINE
+   Real version: stream of section events from the rewrite job.
+   ===================================================================== */
+let run = 0;
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+async function wait(ms, id) { await sleep(ms); if (id !== run) throw 'stopped'; }
+const waiters = {};
+function emit(k) { (waiters[k] || []).forEach(f => f()); waiters[k] = []; }
+function when(k) { return new Promise(r => (waiters[k] = waiters[k] || []).push(r)); }
+
+function resetBook() {
+  book.innerHTML = '';
+  UNITS.forEach((u, i) => { state[i] = 'queued'; typed[i] = 0; book.appendChild(queuedEl(u)); });
+  renderChips(); updatePages();
+}
+
+async function materialize(i, id) {           // unit that "renders in" as finished pages
+  const u = UNITS[i];
+  state[i] = 'writing'; renderChips();
+  setStatus('Writing Lektion ' + u.n + ' · ' + u.title, 'Rewriting from ' + u.oldPages + ' pages of the current book');
+  const el = fullSheet(u); el.classList.add('rendering');
+  $('#unit-' + u.n).replaceWith(el);
+  keepInView(el);
+  await wait(1400, id);
+  el.classList.remove('rendering');
+  state[i] = 'done'; typed[i] = totalChars[i]; renderChips(); updatePages();
+  emit('done' + u.n);
+}
+
+async function typeInto(p, text, i, id, tail) {
+  const node = document.createTextNode(''); const caret = document.createElement('span'); caret.className = 'caret';
+  p.append(node, caret);
+  for (let k = 0; k < text.length; k += 3) {
+    node.data = text.slice(0, k + 3); typed[i] += 3;
+    if (k % 30 === 0) { keepInView(tail); updatePages(); }
+    await wait(16, id);
+  }
+  caret.remove();
+}
+
+async function writeLive(i, id) {             // unit written in front of the MV's eyes
+  const u = UNITS[i];
+  state[i] = 'writing'; renderChips();
+  const el = sheetShell(u, 'writing'); el.classList.add('writing');
+  $('#unit-' + u.n).replaceWith(el);
+  const body = $('.sheet-body', el);
+  const tail = document.createElement('div'); tail.className = 'tail';
+  tail.innerHTML = '<div class="lab">✦ generating…</div><div class="shim" style="width:96%"></div><div class="shim" style="width:88%"></div><div class="shim" style="width:64%"></div>';
+  body.appendChild(tail);
+  keepInView(tail);
+  await wait(700, id);
+  for (let si = 0; si < u.sections.length; si++) {
+    const s = u.sections[si];
+    setStatus('Writing Lektion ' + u.n + ' · ' + s.title, 'Using: current book, module description, Job-Readiness, Constructive Alignment');
+    const se = secEl(u, si); body.insertBefore(se, tail);
+    const sb = $('.sec-body', se);
+    for (const b of s.blocks) {
+      if (b.t === 'fig') {
+        setStatus('Creating an image for Lektion ' + u.n, s.title + ' · image style: IU illustration template');
+        const f = document.createElement('div'); f.className = 'fig'; f.innerHTML = '<div class="fig-gen"><span>✦ Creating image…</span></div>';
+        sb.appendChild(f); keepInView(tail);
+        await wait(2000, id);
+        f.outerHTML = figHTML(b); typed[i] += 400; updatePages();
+        setStatus('Writing Lektion ' + u.n + ' · ' + s.title, 'Using: current book, module description, Job-Readiness, Constructive Alignment');
+        continue;
+      }
+      const wrap = document.createElement('div');
+      if (b.t === 'box') { wrap.className = 'blk box ' + (b.k === 'praxis' ? 'praxis' : ''); wrap.innerHTML = `<div class="h">${b.h}</div>`; }
+      else { wrap.className = 'blk'; if (b.mn) wrap.innerHTML = `<aside class="mnote"><b>${esc(b.mn[0])}</b>${esc(b.mn[1])}</aside>`; }
+      const p = document.createElement('p'); p.className = 'txt'; wrap.appendChild(p); sb.appendChild(wrap);
+      await typeInto(p, b.x, i, id, tail);
+      await wait(250, id);
+    }
+    emit('sec' + u.n + '.' + si);
+  }
+  if (u.endless) {                           // the demo ends mid-generation on purpose
+    const next = 'Writing Lektion ' + u.n + ' · 4.2 Lyrik';
+    setStatus(next, 'Still to write: 4.2–4.5, Lektion 5 and 6');
+    $('.lab', tail).textContent = '✦ generating 4.2 Lyrik…';
+    emit('endless'); return;
+  }
+  tail.remove();
+  const tag = $('.sheet-tag', el); tag.className = 'sheet-tag tag-done'; tag.textContent = '✓ Written by AI · ' + u.est + ' pages';
+  el.classList.remove('writing');
+  state[i] = 'done'; typed[i] = totalChars[i]; renderChips(); updatePages();
+  emit('done' + u.n);
+}
+
+async function regenSection(se, opts = {}) {  // swaps in canned alternate text
+  const u = UNITS[se.dataset.u - 1], s = u.sections[se.dataset.s];
+  if (se.classList.contains('regen')) return;
+  se.classList.add('regen');
+  await sleep(opts.ms || 1900);
+  if (s.alt) { const t = s.blocks; s.blocks = s.alt; s.alt = t; }
+  $('.sec-body', se).innerHTML = s.blocks.map(blockHTML).join('');
+  se.classList.remove('regen'); se.classList.add('just');
+  const h = $('.sec-h', se); $('.fresh', h)?.remove();
+  h.insertAdjacentHTML('beforeend', '<span class="fresh">Rewritten just now</span>');
+  setTimeout(() => se.classList.remove('just'), 2500);
+}
+async function regenUnit(n) {
+  const el = $('#unit-' + n); if (!el) return;
+  const wasFollow = follow; follow = false; renderChips();
+  el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  for (const se of el.querySelectorAll('.sec')) if (UNITS[n - 1].sections[se.dataset.s].alt) await regenSection(se, { ms: 1700 });
+  const tag = $('.sheet-tag', el); tag.className = 'sheet-tag tag-rewritten'; tag.textContent = '↻ Rewritten · more like the intro';
+  await sleep(1200);
+  follow = wasFollow; renderChips();
+  if (follow) keepInView($('.tail'));
+}
+
+async function genBook(id) {
+  setStatus('Getting ready…', 'Reading your current book (262 pages) and the module description');
+  await wait(1300, id);
+  await materialize(0, id);
+  await materialize(1, id);
+  await writeLive(2, id);
+  await writeLive(3, id);
+}
+
+/* =====================================================================
+   CANNED CHAT
+   Real version: agent conversation; instructions become generation parameters.
+   ===================================================================== */
+function addMsg(role, html, extra) {
+  const el = document.createElement('div');
+  el.className = role === 'sys' ? 'sys' : 'msg ' + role;
+  el.innerHTML = role === 'sys' ? html : `<span class="who">${role === 'ai' ? 'AI Book Writer' : 'You'}</span>${html}`;
+  if (extra) el.appendChild(extra);
+  chat.appendChild(el); chat.scrollTop = chat.scrollHeight;
+  return el;
+}
+async function aiSay(html, id, ms = 1100, extra) {
+  const t = document.createElement('div'); t.className = 'msg ai typing'; t.innerHTML = '<i></i><i></i><i></i>';
+  chat.appendChild(t); chat.scrollTop = chat.scrollHeight;
+  await wait(ms, id); t.remove();
+  return addMsg('ai', html, extra);
+}
+function showBtn(label, n) {
+  const b = document.createElement('button'); b.className = 'show'; b.textContent = label;
+  b.onclick = () => { follow = false; renderChips(); $('#unit-' + n).scrollIntoView({ behavior: 'smooth', block: 'start' }); };
+  return b;
+}
+function setSuggest(on) { document.querySelectorAll('#suggest button').forEach(b => b.disabled = !on); }
+
+async function chatStory(id) {
+  await wait(400, id);
+  await aiSay('Hi! I’ve read your current book (262 pages), the module description and the IU frameworks. Tell me in your own words what the new edition should be like — I’ll take care of the writing.', id, 900);
+  await wait(1300, id);
+  addMsg('me', 'Rewrite the whole book to emphasize digital and AI-based methods, keep it practical.');
+  $('#focusChip').textContent = '✦ Digital & AI-based methods · practical';
+  await aiSay('Got it. Here’s my plan:<ul><li>Keep the 6 Lektionen and all 4 course goals</li><li>Add digital and AI-based methods to every Lektion, with hands-on exercises</li><li>Aim for about 200 pages, with images where they help</li></ul>Starting now — watch the book on the left.', id, 1500);
+  genBook(id).catch(() => {});
+  await when('done2'); if (id !== run) return;
+  await aiSay('Lektion 1 and 2 are ready, including 2 new images. I’m writing Lektion 3 now.', id, 800, showBtn('View Lektion 2', 2));
+  await when('sec3.0'); if (id !== run) return;
+  await wait(900, id);
+  addMsg('me', 'Lektion 2 feels too academic — make it more like the intro.');
+  await aiSay('Sure. Shorter sentences, more everyday examples, same learning objectives. Rewriting Lektion 2 now — Lektion 3 keeps going in the meantime.', id, 1000);
+  await regenUnit(2);
+  if (id !== run) return;
+  await aiSay('Done — Lektion 2 now reads like the intro. Anything else you’d like to change?', id, 600, showBtn('See the changes', 2));
+  setSuggest(true);
+  await when('endless'); if (id !== run) return;
+  addMsg('sys', $('#pgNow').textContent + ' of ~' + target + ' pages written · you can keep steering at any time');
+}
+
+const CANNED = {
+  short: ['Make it shorter, around 180 pages', 'Okay — new target: about 180 pages. I’ll tighten Lektion 4 and 5 most, since they were the longest in the old book.', () => { $('#len').value = 180; onLen(); }],
+  publishing: ['More examples from publishing', 'Good idea. From now on, every Lektion gets one example from publishing (Lektorat, Programmplanung, Buchmarketing). I’ll add them to Lektion 1–3 at the end.', null],
+  fewer: ['Use fewer images', 'Noted — I’ll use fewer images: roughly one per Lektion from here on.', () => setSeg($('#imgSeg'), 0, true)]
+};
+document.getElementById('suggest').addEventListener('click', async e => {
+  const b = e.target.closest('button'); if (!b || b.disabled) return;
+  const [q, a, fx] = CANNED[b.dataset.s]; b.disabled = true;
+  addMsg('me', esc(q)); await aiSay(a, run, 900).catch(() => {}); fx && fx();
+});
+$('#composer').addEventListener('submit', async e => {
+  e.preventDefault(); const v = $('#chatInput').value.trim(); if (!v) return;
+  $('#chatInput').value = ''; addMsg('me', esc(v));
+  await aiSay('In the real tool I would now rewrite the book based on this. In this mockup I only know a few pre-written replies — try the suggestions above.', run, 900).catch(() => {});
+});
+
+/* =====================================================================
+   CONTROLS
+   ===================================================================== */
+function onLen() {
+  target = +$('#len').value;
+  $('#lenVal').textContent = '~' + target + ' pages'; $('#pgTarget').textContent = '~' + target; updatePages();
+}
+$('#len').addEventListener('input', onLen);
+function setSeg(seg, idx, silent) {
+  [...seg.children].forEach((b, k) => b.classList.toggle('on', k === idx));
+  if (!silent) addMsg('ai', `Noted — <b>${seg.dataset.knob}: ${seg.children[idx].textContent}</b>. I’ll use this for everything I write from now on. Want me to redo the finished Lektionen too?`);
+}
+document.querySelectorAll('.seg').forEach(seg => seg.addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b || b.classList.contains('on')) return;
+  setSeg(seg, [...seg.children].indexOf(b));
+}));
+book.addEventListener('click', e => {
+  const b = e.target.closest('.regen-btn'); if (!b) return;
+  if (b.closest('.sheet.writing')) { toast('This Lektion is still being written — try a finished one.'); return; }
+  regenSection(b.closest('.sec'));
+});
+$('#uchips').addEventListener('click', e => {
+  const go = e.target.closest('[data-go]');
+  if (go) { follow = false; renderChips(); $('#unit-' + go.dataset.go).scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
+  if (e.target.closest('#followBtn')) { follow = true; renderChips(); keepInView($('.tail')); }
+});
+function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('show'), 2600); }
+
+function start() {
+  run++; const id = run;
+  Object.keys(waiters).forEach(k => delete waiters[k]);
+  UNITS.forEach(u => u.sections.forEach(s => { if (s._orig) { s.blocks = s._orig; s.alt = s._alt; } else { s._orig = s.blocks; s._alt = s.alt; } }));
+  chat.innerHTML = ''; setSuggest(false); follow = true; canvas.scrollTop = 0;
+  $('#focusChip').textContent = '✦ Waiting for your instructions';
+  resetBook();
+  chatStory(id).catch(() => {});
+}
+$('#genBtn').addEventListener('click', () => { start(); toast('Mockup: restarting the generation from the beginning.'); });
+$('#replay').addEventListener('click', start);
+
+/* =====================================================================
+   PM VIEW — annotation layer
+   Texts from "Main Outputs from MVs — Discoveries & Testing" (sessions 06/25, 04/26, 05/26).
+   Quotes verbatim; every attribution anonymous (no names, no initials). Note 3 is a PM observation, not MV evidence.
+   ===================================================================== */
+const Q = (text, who) => `<div class="q">${text}<cite>— MV, ${who}</cite></div>`;
+const SRC = '<span class="refs">Source: Main Outputs from MVs — Discoveries &amp; Testing</span>';
+const PM_NOTES = [
+  { n: 1, anchor: () => $('#status'), pinAt: () => { const r = $('#liveDot').getBoundingClientRect(); return [r.left + 5, r.top + 5]; }, side: 'below-right',
+    kind: 'MV evidence', title: 'Live rewrite',
+    html: '<div class="hl">Control &amp; ownership — the top adoption risk.</div>' +
+          Q('“If it would be just AI, I would have a problem with that.”', 'discovery interview') +
+          '<div class="sup">MVs welcome AI for proofreading, suggestions and consistency checks, but want to review, reject or adapt its output — <b>accept/reject control, not automatic application of every change.</b></div>' + SRC },
+  { n: 2, anchor: () => $('#genBtn'), at: 'tr', side: 'right-bottom',
+    kind: 'MV evidence', title: 'Whole-book generation',
+    html: '<div class="hl">Whole-course automation could increase verification effort — flagged as a risk to test.</div>' +
+          Q('“Previous AI outputs sometimes required more work instead of less.”', 'discovery interview') +
+          Q('AI incorrectly changed citation details; manually checks suggestions and accepts around 60%.', 'user testing') +
+          Q('AI replaced technical terms, changing their intended meaning.', 'user testing') +
+          Q('Reported exam questions that could not be answered from the course book (content–assessment alignment risk).', 'user testing') + SRC },
+  { n: 3, anchor: () => firstVisible('.fig-img') || canvas, at: 'tr', side: 'inside-right', obs: true,
+    kind: 'PM observation', title: 'not MV evidence',
+    html: '<b>PM observation (not covered in MV testing):</b> AI images render in the same form → visual monotony; still needs human curation.<button class="jump" data-jump="fig">Show me an image ↑</button>' },
+  { n: 4, anchor: () => $('#sourcesBlock'), at: 'tr', side: 'right',
+    kind: 'MV evidence', title: 'Where AI fits',
+    html: '<div class="hl">Where AI is welcomed — as targeted assistance, not a full rewrite.</div>' +
+          Q('Strongly welcomed AI formal review and was reassured that the author retained publishing authority.', 'discovery interview') +
+          '<div class="sup">Fits best as an <b>optional accelerator for a first draft or a single section</b> — a feature inside a professor-led workflow, with clear AI suggestions and accept/reject controls.</div>' + SRC }
+];
+const pmLayer = $('#pmLayer');
+const closed = new Set();
+PM_NOTES.forEach(c => {
+  c.pin = document.createElement('div'); c.pin.className = 'pm-pin' + (c.obs ? ' obs' : ''); c.pin.textContent = c.n; c.pin.title = c.kind + ' ' + c.n;
+  c.note = document.createElement('div'); c.note.className = 'pm-note' + (c.obs ? ' obs' : '');
+  c.note.innerHTML = `<div class="h">${c.n} · ${c.kind} · ${c.title}<button class="x" title="Collapse">×</button></div>${c.html}`;
+  c.note.querySelector('.jump')?.addEventListener('click', jumpToImage);
+  $('.x', c.note).onclick = () => { closed.add(c.n); c.note.classList.add('min'); };
+  c.pin.onclick = () => { closed.has(c.n) ? closed.delete(c.n) : closed.add(c.n); c.note.classList.toggle('min', closed.has(c.n)); };
+  pmLayer.append(c.note, c.pin);
+});
+function firstVisible(sel) {            // any image at least partly visible below the sticky status bar
+  const c = canvas.getBoundingClientRect(), top = $('#status').getBoundingClientRect().bottom;
+  return [...document.querySelectorAll(sel)].find(el => { const r = el.getBoundingClientRect(); return r.bottom > top + 60 && r.top < c.bottom - 60; }) || null;
+}
+function jumpToImage() {                 // nearest image, preferring the one just above the current view
+  const figs = [...document.querySelectorAll('.fig-img')]; if (!figs.length) return;
+  const top = $('#status').getBoundingClientRect().bottom;
+  const above = figs.filter(f => f.getBoundingClientRect().top < top);
+  follow = false; renderChips();
+  (above.pop() || figs[0]).scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+function placeNotes() {
+  if (!document.body.classList.contains('pm')) return;
+  const W = innerWidth, H = innerHeight, NW = 292;
+  const anchors = PM_NOTES.map(c => c.anchor());
+  document.querySelectorAll('.pm-target').forEach(x => { if (!anchors.includes(x)) x.classList.remove('pm-target'); });
+  const placed = [];
+  PM_NOTES.forEach((c, k) => {
+    const a = anchors[k];
+    const r = a && a.getBoundingClientRect();
+    if (!a || r.bottom < 0 || r.top > H) { c.pin.style.display = c.note.style.display = 'none'; return; }
+    const docked = a === canvas;
+    if (!docked && !a.classList.contains('fig-img')) a.classList.add('pm-target');
+    c.note.querySelector('.jump')?.classList.toggle('show', docked);
+    const [px, py] = c.pinAt ? c.pinAt() : [c.at.includes('r') ? r.right - 6 : r.left + 6, c.at.includes('b') ? r.bottom - 6 : r.top + 6];
+    c.pin.style.display = docked ? 'none' : 'grid'; c.pin.style.left = px + 'px'; c.pin.style.top = py + 'px';
+    c.note.style.display = '';
+    if (closed.has(c.n)) return;
+    const nh = c.note.offsetHeight || 160;
+    let x, y;
+    switch (docked ? 'dock' : c.side) {
+      case 'dock':         x = r.right - NW - 24; y = r.bottom - nh - 20; break;
+      case 'below-right':  x = r.right - NW - 32; y = r.bottom + 12; break;
+      case 'inside-right': x = r.right - NW - 18; y = r.top + 22; break;
+      case 'right':        x = r.right + 16;      y = r.top - 4; break;
+      case 'right-bottom': x = r.right + 16;      y = r.bottom - nh; break;
+    }
+    x = Math.max(8, Math.min(W - NW - 8, x)); y = Math.max(8, Math.min(H - nh - 8, y));
+    // keep notes from stacking on top of each other
+    for (let pass = 0; pass < 3; pass++) placed.forEach(o => {
+      if (x < o.x + NW && o.x < x + NW && y < o.y + o.h + 10 && o.y < y + nh) y = o.y + o.h + 10;
+    });
+    placed.push({ x, y, h: nh });
+    c.note.style.left = x + 'px'; c.note.style.top = y + 'px';
+  });
+}
+(function loop() { placeNotes(); requestAnimationFrame(loop); })();
+$('#pmToggle').addEventListener('click', e => {
+  e.preventDefault();
+  document.body.classList.toggle('pm');
+  if (document.body.classList.contains('pm')) { const pr = $('.params'), g = $('#genBtn'); pr.scrollTop = Math.max(0, g.offsetTop - pr.clientHeight + 120); }
+  if (!document.body.classList.contains('pm')) document.querySelectorAll('.pm-target').forEach(x => x.classList.remove('pm-target'));
+});
+
+start();
+</script>
+</body>
+</html>

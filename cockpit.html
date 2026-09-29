@@ -1,0 +1,1079 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Large Revision · Option 2 · Suggestion Cockpit</title>
+<!--
+  MOCKUP of Large Revision "Option 2 — the cockpit": the module owner (MV) works through
+  large-revision suggestions one at a time; AI is an on-demand helper, not the driver.
+  Not functional. All data is hard-coded, every interaction is canned. Opens by double-click.
+
+  Style: same SSP tokens as the sibling mockups (large-revision-planning-mockup-v5.html,
+  large-revision-option1-ai-rewrite-mockup.html), taken from ai.media.ssp:
+   - tailwind.config.js colours (#1D1D1F, #575E62, #C7CDD0, #EBEBEB, #0044E4, #0033AB, #3772FF,
+     #652E98, #2B3845, #F2F3F5, #D2F3E0, #FFF0BA/#684B00, #226F3F/#B7E9CB (PM layer), #C62525)
+   - css/main.css (Roboto, #1D1D1F body text, clig/liga off), page background #E5E7EB
+   - TopBarView (64px white bar, 0 9px 25px rgba(0,0,0,.12) shadow)
+   - ButtonComponent (8px radius, bold 15px/22px, #0044E4 → #0033AB hover)
+   - LargeRevisionStepperComponent (40px pills; active = white + 2px #0044E4 border,
+     completed = #0044E4 fill + check, pending = #F0F1F2/#898A8A, 32px #C7CDD0 connectors);
+     same 3 steps as the siblings: 1 · Structure / Learning Objectives → 2 · Content → 3 · Review (AI Editor Review)
+  No external requests, no fonts downloaded (Roboto is used if installed, else system fallback).
+-->
+<style>
+  :root {
+    --iu-blue: #0044E4;
+    --iu-blue-hover: #0033AB;
+    --iu-blue-soft: #3772FF;
+    --iu-blue-tint: #E6EDFF;
+    --iu-blue-ink: #0E48C7;
+    --iu-black: #1D1D1F;
+    --iu-anthracite: #575E62;
+    --iu-grey: #C7CDD0;
+    --iu-grey-light: #EBEBEB;
+    --page: #E5E7EB;
+    --surface: #FFFFFF;
+    --surface-soft: #F2F3F5;
+    --pending-bg: #F0F1F2;
+    --pending-fg: #898A8A;
+    --purple: #652E98;
+    --purple-tint: #F3EAFB;
+    --navy: #2B3845;
+    --shadow: 0 9px 25px 0 rgba(0,0,0,.12);
+    --shadow-soft: 0 2px 8px rgba(0,0,0,.06);
+    --radius: 12px;
+    --radius-sm: 8px;
+
+    /* Diff colours — SSP success / feedback-danger family (same as "new" / "removed" in the planning mockup) */
+    --ins-fg: #175830; --ins-bg: #D2F3E0; --ins-line: #1E8A4C;
+    --del-fg: #8A0A0A; --del-bg: #FFE3E3; --del-line: #C62525;
+    --warn-bg: #FFF0BA; --warn-fg: #684B00;
+    --lock-bg: #EEF1F5; --lock-line: #B3B9BD;
+
+    /* PM annotation layer — green because the evidence here SUPPORTS this approach.
+       SSP success tokens iu-success-dark #226F3F / iu-success-light #B7E9CB; darker and cooler than the product's diff/accept green */
+    --pm-fg: #226F3F; --pm-bg: #EEF9F2; --pm-line: #4E9E6E; --pm-soft: #B7E9CB; --pm-ink: #0F3B22; --pm-glow: rgba(34,111,63,.18);
+
+    --font: Roboto, "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    font-family: var(--font); color: var(--iu-black); background: var(--page);
+    font-size: 15px; line-height: 1.5; font-feature-settings: 'clig' off, 'liga' off;
+    display: flex; flex-direction: column; overflow: hidden;
+  }
+  button, input, select { font-family: inherit; }
+  h1, h2, h3, h4 { margin: 0; font-weight: 700; }
+  kbd { font-family: inherit; font-size: 10.5px; font-weight: 500; border: 1px solid currentColor; opacity: .55; border-radius: 4px; padding: 0 4px; line-height: 15px; }
+
+  /* ---------- Banner + top bar (SSP TopBarView) ---------- */
+  .mock-banner { background: var(--warn-bg); color: var(--warn-fg); text-align: center; font-size: 13px; font-weight: 700; letter-spacing: .02em; padding: 6px 16px; flex-shrink: 0; }
+  .topbar { height: 64px; background: var(--surface); box-shadow: var(--shadow); display: flex; align-items: center; gap: 24px; padding: 0 28px; position: relative; z-index: 30; flex-shrink: 0; }
+  .topbar img { height: 36px; display: block; }
+  .course-id { min-width: 0; border-left: 1px solid var(--iu-grey-light); padding-left: 24px; }
+  .course-id .eyebrow { font-size: 12px; color: var(--iu-anthracite); }
+  .course-id .name { font-weight: 700; font-size: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .course-id .code { font-weight: 400; color: var(--iu-anthracite); }
+
+  /* Stepper (LargeRevisionStepperComponent) */
+  .stepper { margin-left: auto; display: flex; align-items: center; flex-shrink: 0; }
+  .stepper .conn { width: 32px; height: 2px; background: var(--iu-grey); }
+  .stepper .conn.done { background: var(--iu-blue); }
+  .pill { display: flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 40px; white-space: nowrap; font-size: 13px; font-weight: 500; border: 2px solid transparent; }
+  .pill--completed { background: var(--iu-blue); color: #fff; padding: 6px 12px; }
+  .pill--active { background: #fff; color: var(--iu-blue); border-color: var(--iu-blue); }
+  .pill--pending { background: var(--pending-bg); color: var(--pending-fg); }
+  .pill .sub { font-size: 11px; font-weight: 400; opacity: .8; }
+  .top-right { display: flex; align-items: center; gap: 16px; flex-shrink: 0; }
+  .pm-toggle { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--iu-anthracite); cursor: pointer; user-select: none; border: 1px dashed var(--iu-grey); border-radius: 40px; padding: 4px 10px 4px 6px; background: #fff; }
+  .pm-toggle .switch { width: 30px; height: 18px; border-radius: 20px; background: var(--iu-grey); position: relative; transition: background .2s; }
+  .pm-toggle .switch::after { content: ""; position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-radius: 50%; background: #fff; transition: transform .2s; box-shadow: 0 1px 2px rgba(0,0,0,.2); }
+  body.pm .pm-toggle { border-color: var(--pm-line); color: var(--pm-fg); background: var(--pm-bg); font-weight: 700; }
+  body.pm .pm-toggle .switch { background: var(--pm-fg); }
+  body.pm .pm-toggle .switch::after { transform: translateX(12px); }
+  .avatar { width: 40px; height: 40px; border-radius: 50%; background: var(--iu-anthracite); color: #fff; display: grid; place-items: center; flex-shrink: 0; }
+
+  /* ---------- Context strip: progress + status/visibility ---------- */
+  .ctxbar { flex-shrink: 0; background: #FAFAFB; border-bottom: 1px solid var(--iu-grey-light); padding: 10px 28px; display: flex; align-items: center; gap: 24px; position: relative; z-index: 25; }
+  .prog { display: flex; align-items: center; gap: 14px; min-width: 0; }
+  .prog .big { font-size: 17px; font-weight: 700; white-space: nowrap; }
+  .prog .big span { color: var(--iu-anthracite); font-weight: 400; }
+  .prog .bar { width: 240px; height: 8px; background: var(--iu-grey-light); border-radius: 8px; overflow: hidden; display: flex; }
+  .prog .bar i { display: block; height: 100%; transition: width .4s; }
+  .prog .bar .b-acc { background: var(--ins-line); }
+  .prog .bar .b-rej { background: #E7A3A3; }
+  .prog .meta { font-size: 12.5px; color: var(--iu-anthracite); white-space: nowrap; }
+  .status-w { margin-left: auto; position: relative; display: inline-flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--iu-anthracite); background: #fff; border: 1px solid var(--iu-grey-light); border-radius: 40px; padding: 4px 12px; cursor: pointer; white-space: nowrap; }
+  .status-w:hover { border-color: var(--iu-grey); }
+  .status-w b { color: var(--iu-black); font-weight: 700; }
+  .status-w .sep { color: var(--iu-grey); }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: #E0A800; flex-shrink: 0; }
+  .status-pop { display: none; position: absolute; right: 0; top: calc(100% + 8px); width: 330px; background: #fff; border-radius: var(--radius); box-shadow: var(--shadow); padding: 14px 16px; white-space: normal; text-align: left; color: var(--iu-black); cursor: default; z-index: 50; }
+  .status-pop.open { display: block; }
+  .tl { position: relative; padding-left: 22px; margin: 0; list-style: none; }
+  .tl li { position: relative; padding-bottom: 12px; font-size: 13px; }
+  .tl li:last-child { padding-bottom: 0; }
+  .tl li::before { content: ""; position: absolute; left: -22px; top: 3px; width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--iu-grey); background: #fff; }
+  .tl li::after { content: ""; position: absolute; left: -17px; top: 17px; bottom: -1px; width: 2px; background: var(--iu-grey-light); }
+  .tl li:last-child::after { display: none; }
+  .tl li.now::before { border-color: #E0A800; background: #FFF0BA; }
+  .tl small { display: block; color: var(--iu-anthracite); font-size: 12px; }
+
+  /* ---------- PM bar (only in PM view) ---------- */
+  .pm-bar { display: none; background: var(--pm-bg); border-bottom: 2px solid var(--pm-line); color: var(--pm-fg); padding: 8px 28px; font-size: 13px; gap: 16px; align-items: center; flex-shrink: 0; position: relative; z-index: 24; }
+  body.pm .pm-bar { display: flex; }
+  .pm-bar b { font-weight: 700; }
+  .pm-bar .pm-kicker { flex-shrink: 0; font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; background: var(--pm-fg); color: #fff; border-radius: 40px; padding: 3px 10px; }
+  .pm-bar .thesis { flex: 1; min-width: 0; line-height: 1.45; }
+  .pm-bar .src-line { display: block; font-size: 11.5px; color: var(--pm-line); margin-top: 1px; }
+  .pm-bar .pm-all { flex-shrink: 0; border: 1px solid var(--pm-line); background: #fff; color: var(--pm-fg); border-radius: 40px; font-size: 12px; font-weight: 700; padding: 3px 12px; cursor: pointer; }
+
+  /* ---------- Cockpit layout ---------- */
+  .cockpit { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) 340px; }
+  .col-scroll { overflow-y: auto; min-height: 0; }
+  .center { position: relative; }
+  .stage { max-width: 840px; margin: 0 auto; padding: 18px 32px 40px; transition: margin .25s, max-width .25s; }
+  body.pm .stage { margin-left: 330px; max-width: calc(100% - 340px); padding-right: 24px; }
+
+  .where { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 12.5px; color: var(--iu-anthracite); margin-bottom: 10px; }
+  .where b { color: var(--iu-black); font-weight: 500; }
+  .where .chev { color: var(--iu-grey); }
+  .where .open-ed { margin-left: auto; border: 0; background: none; color: var(--iu-blue); font-size: 12.5px; font-weight: 700; cursor: pointer; padding: 0; }
+
+  /* The page: surrounding text dimmed, the suggestion lifted out of it */
+  .sheet { background: #fff; border-radius: 4px; box-shadow: 0 1px 2px rgba(0,0,0,.06), 0 8px 24px rgba(0,0,0,.07); padding: 22px 34px 26px; position: relative; }
+  .ctx { font-size: 14px; line-height: 1.65; color: var(--iu-anthracite); opacity: .55; margin: 0; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+  .ctx.after { margin-top: 18px; -webkit-line-clamp: 2; }
+  .ctx-h { font-size: 13px; font-weight: 700; color: var(--iu-anthracite); opacity: .6; margin: 0 0 4px; }
+  .margin-note { float: right; width: 190px; margin: 2px -8px 8px 18px; font-size: 11.5px; line-height: 1.4; color: var(--iu-anthracite); border-top: 2px solid var(--iu-blue-soft); padding-top: 4px; opacity: 1; }
+  .margin-note b { display: flex; gap: 4px; align-items: center; color: var(--iu-black); }
+
+  .focus-card { clear: both; position: relative; margin: 16px -18px 0; background: #fff; border-radius: var(--radius); box-shadow: 0 0 0 1px #D6DEF5, 0 14px 34px rgba(0, 68, 228, .12); padding: 18px 22px 16px; border-left: 4px solid var(--iu-blue); }
+  .focus-card.enter { animation: enter .35s ease-out; }
+  @keyframes enter { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+  .fc-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .fc-head .num { font-size: 13px; font-weight: 700; color: var(--iu-anthracite); }
+  .chip { font-size: 12px; font-weight: 700; border-radius: 40px; padding: 2px 10px; white-space: nowrap; display: inline-flex; gap: 5px; align-items: center; }
+  .t-clarity { background: var(--iu-blue-tint); color: var(--iu-blue-ink); }
+  .t-structure { background: var(--purple-tint); color: var(--purple); }
+  .t-job-readiness { background: #D2F3E0; color: #175830; }
+  .t-citation { background: #EEF1F5; color: var(--navy); }
+  .t-compliance { background: #FFF0BA; color: #684B00; }
+  .size-minor { background: #fff; color: var(--iu-anthracite); box-shadow: inset 0 0 0 1px var(--iu-grey); font-weight: 500; }
+  .size-major { background: #fff; color: var(--purple); box-shadow: inset 0 0 0 1px #C9A6E6; }
+  .ai-badge { background: #fff; color: var(--iu-blue-ink); box-shadow: inset 0 0 0 1px #C9D6FF; font-weight: 500; }
+  .fc-state { margin-left: auto; font-size: 12px; color: var(--pending-fg); }
+  .why { margin: 10px 0 0; font-size: 14px; color: var(--iu-black); background: var(--surface-soft); border-radius: var(--radius-sm); padding: 8px 12px; display: flex; gap: 8px; align-items: flex-start; }
+  .why svg { flex-shrink: 0; margin-top: 3px; color: var(--iu-anthracite); }
+  .why .tag { font-weight: 700; }
+
+  .view-row { display: flex; align-items: center; gap: 10px; margin: 14px 0 8px; flex-wrap: wrap; }
+  .view-row .lbl { font-size: 12px; color: var(--iu-anthracite); }
+  .seg { display: inline-flex; background: var(--surface-soft); border-radius: var(--radius-sm); padding: 3px; gap: 2px; }
+  .seg button { border: 0; background: none; padding: 4px 12px; font-size: 12.5px; border-radius: 6px; cursor: pointer; color: var(--iu-anthracite); white-space: nowrap; }
+  .seg button:hover { color: var(--iu-black); }
+  .seg button.on { background: #fff; color: var(--iu-blue); font-weight: 700; box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+  .chg-count { margin-left: auto; font-size: 12px; color: var(--iu-anthracite); }
+  .legend-mini { display: inline-flex; gap: 10px; font-size: 12px; color: var(--iu-anthracite); }
+  .legend-mini del, .legend-mini ins { font-size: 12px; }
+
+  .diff { font-size: 16.5px; line-height: 1.8; hyphens: auto; padding: 4px 2px; min-height: 60px; }
+  .diff del { background: var(--del-bg); color: var(--del-fg); text-decoration: line-through; text-decoration-color: rgba(138,10,10,.55); border-radius: 3px; padding: 1px 2px; }
+  .diff ins, .legend-mini ins { background: var(--ins-bg); color: var(--ins-fg); text-decoration: none; border-bottom: 2px solid var(--ins-line); border-radius: 3px 3px 0 0; padding: 1px 2px; }
+  .legend-mini del { background: var(--del-bg); color: var(--del-fg); border-radius: 3px; padding: 0 3px; }
+  .legend-mini ins { padding: 0 3px; }
+  .sbs { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .sbs > div { background: var(--surface-soft); border-radius: var(--radius-sm); padding: 10px 14px; font-size: 15px; line-height: 1.7; }
+  .sbs > div.new { background: #F4FBF7; }
+  .sbs .h { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--iu-anthracite); margin-bottom: 4px; }
+  .hold-wrap { position: relative; }
+  .hold-label { display: inline-flex; font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; border-radius: 40px; padding: 1px 9px; margin-bottom: 4px; }
+  .hold-label.new { background: var(--ins-bg); color: var(--ins-fg); }
+  .hold-label.old { background: var(--pending-bg); color: var(--iu-anthracite); }
+  .hold-btn { margin-top: 8px; border: 1px solid var(--iu-grey); background: #fff; color: var(--iu-black); border-radius: 40px; padding: 5px 14px; font-size: 13px; cursor: pointer; user-select: none; }
+  .hold-btn:active, .hold-btn.down { background: var(--iu-blue-tint); border-color: var(--iu-blue); color: var(--iu-blue); }
+
+  /* Protected tokens */
+  .lock { display: inline-flex; align-items: baseline; gap: 3px; background: var(--lock-bg); border: 1px solid var(--lock-line); border-radius: 4px; padding: 0 4px; line-height: 1.35; white-space: nowrap; color: var(--navy); cursor: help; }
+  .lock svg { width: 10px; height: 10px; flex-shrink: 0; align-self: center; }
+  .protect { margin-top: 10px; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; font-size: 12.5px; color: var(--iu-anthracite); border-top: 1px dashed var(--iu-grey-light); padding-top: 10px; }
+  .protect .ph { font-weight: 700; color: var(--navy); display: inline-flex; gap: 5px; align-items: center; }
+  .protect .pi { display: inline-flex; align-items: center; gap: 5px; background: #fff; border: 1px solid var(--iu-grey-light); border-radius: 40px; padding: 1px 9px 1px 4px; }
+  .protect .pi .k { font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: #fff; background: var(--navy); border-radius: 40px; padding: 0 6px; }
+  .protect .ok { color: var(--ins-fg); font-weight: 700; }
+
+  /* Edit mode */
+  .edit-box { font-size: 16.5px; line-height: 1.8; border: 2px solid var(--iu-blue); border-radius: var(--radius-sm); padding: 10px 14px; outline: none; background: #FBFCFF; }
+  .edit-hint { font-size: 12.5px; color: var(--iu-anthracite); margin-top: 6px; }
+  .edit-warn { display: none; margin-top: 8px; background: var(--warn-bg); color: var(--warn-fg); border-radius: var(--radius-sm); padding: 8px 12px; font-size: 13px; }
+  .edit-warn.show { display: block; }
+
+  /* On-demand AI helper — deliberately quieter than the manual controls */
+  .ai-row { margin-top: 12px; display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--iu-anthracite); }
+  .ai-link { border: 1px dashed #C9D6FF; background: #fff; color: var(--iu-blue-ink); border-radius: 40px; padding: 3px 11px; font-size: 12.5px; cursor: pointer; display: inline-flex; gap: 5px; align-items: center; }
+  .ai-link:hover { background: #F5F8FF; }
+  .ai-panel { margin-top: 10px; border: 1px dashed #C9D6FF; background: #F8FAFF; border-radius: var(--radius-sm); padding: 12px 14px; font-size: 13.5px; animation: enter .25s ease-out; }
+  .ai-panel .h { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; color: var(--iu-blue-ink); }
+  .ai-panel .h .x { margin-left: auto; border: 0; background: none; font-size: 16px; line-height: 1; color: var(--iu-anthracite); cursor: pointer; }
+  .ai-panel .sel { margin: 6px 0 8px; font-size: 12.5px; color: var(--iu-anthracite); font-style: italic; border-left: 2px solid #C9D6FF; padding-left: 8px; }
+  .presets { display: flex; flex-wrap: wrap; gap: 6px; }
+  .presets button { border: 1px solid var(--iu-grey); background: #fff; color: var(--iu-black); border-radius: 40px; padding: 4px 11px; font-size: 12.5px; cursor: pointer; }
+  .presets button:hover { border-color: var(--iu-blue); color: var(--iu-blue); }
+  .ask-own { display: flex; gap: 6px; margin-top: 8px; }
+  .ask-own input { flex: 1; min-width: 0; border: 1px solid var(--iu-grey); border-radius: var(--radius-sm); padding: 6px 10px; font-size: 13px; }
+  .ask-own button { border: 1px solid var(--iu-grey); background: #fff; border-radius: var(--radius-sm); padding: 5px 12px; font-size: 13px; cursor: pointer; }
+  .ai-text { margin: 8px 0 6px; font-size: 15px; line-height: 1.7; background: #fff; border-radius: 6px; padding: 8px 12px; border: 1px solid #E1E8FA; }
+  .ai-kept { font-size: 12px; color: var(--ins-fg); margin-bottom: 8px; }
+  .ai-acts { display: flex; gap: 8px; flex-wrap: wrap; }
+  .typing { display: inline-flex; gap: 4px; padding: 8px 2px; }
+  .typing i { width: 6px; height: 6px; border-radius: 50%; background: #8DA6E8; animation: blink 1s infinite; }
+  .typing i:nth-child(2) { animation-delay: .15s; } .typing i:nth-child(3) { animation-delay: .3s; }
+  @keyframes blink { 0%,100% { opacity: .25; } 50% { opacity: 1; } }
+  .sel-ask { position: fixed; z-index: 70; display: none; border: 0; background: var(--navy); color: #fff; font-size: 12.5px; font-weight: 500; border-radius: 40px; padding: 5px 12px; cursor: pointer; box-shadow: 0 6px 16px rgba(0,0,0,.2); gap: 5px; align-items: center; }
+  .sel-ask.show { display: inline-flex; }
+
+  .linklike { border: 0; background: none; padding: 0; color: var(--iu-blue); font-size: 13px; font-weight: 700; cursor: pointer; }
+
+  /* Buttons (SSP ButtonComponent) */
+  .btn { border-radius: var(--radius-sm); padding: 10px 18px; font-size: 15px; font-weight: 700; line-height: 22px; cursor: pointer; border: 1px solid; white-space: nowrap; display: inline-flex; gap: 8px; align-items: center; justify-content: center; }
+  .btn-sm { padding: 6px 12px; font-size: 13.5px; line-height: 20px; }
+  .btn-primary { background: var(--iu-blue); color: #fff; border-color: var(--iu-blue); }
+  .btn-primary:hover { background: var(--iu-blue-hover); }
+  .btn-secondary { background: #fff; color: var(--iu-anthracite); border-color: var(--iu-grey); }
+  .btn-secondary:hover { border-color: var(--iu-anthracite); color: var(--iu-black); }
+  .btn[disabled] { background: var(--pending-bg); color: var(--pending-fg); border-color: var(--pending-bg); cursor: not-allowed; }
+  .btn[disabled] kbd { display: none; }
+
+  /* Action bar */
+  .actions { display: flex; align-items: center; gap: 10px; margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--iu-grey-light); flex-wrap: wrap; }
+  .actions .spacer { flex: 1; }
+  .act-accept { background: var(--ins-line); border-color: var(--ins-line); color: #fff; min-width: 132px; }
+  .act-accept:hover { background: #17703D; }
+  .act-reject:hover { border-color: var(--del-line); color: var(--del-fg); }
+  .btn-next { background: #fff; color: var(--iu-blue); border-color: var(--iu-blue); }
+  .btn-next:hover { background: #F5F8FF; }
+  .btn-next.go { background: var(--iu-blue); color: #fff; }
+  .btn-next.go:hover { background: var(--iu-blue-hover); }
+  .think { font-size: 12px; color: var(--pending-fg); }
+  .decided { display: none; margin-top: 14px; border-radius: var(--radius-sm); padding: 9px 14px; font-size: 14px; align-items: center; gap: 10px; animation: enter .25s ease-out; }
+  .decided.show { display: flex; }
+  .decided.accepted, .decided.edited { background: var(--ins-bg); color: var(--ins-fg); }
+  .decided.rejected { background: var(--pending-bg); color: var(--iu-anthracite); }
+  .decided .undo { margin-left: auto; border: 0; background: none; font-weight: 700; color: inherit; text-decoration: underline; cursor: pointer; font-size: 13px; }
+
+  /* Figure (for the alt-text suggestion) */
+  .fig { margin: 12px 0 4px; display: flex; gap: 14px; align-items: center; background: var(--surface-soft); border-radius: var(--radius-sm); padding: 10px; }
+  .fig svg { width: 210px; height: auto; flex-shrink: 0; background: #fff; border-radius: 6px; }
+  .fig figcaption { font-size: 12.5px; color: var(--iu-anthracite); }
+  .fig figcaption b { color: var(--iu-black); display: block; }
+
+  /* End-of-demo card */
+  .end-card { text-align: center; padding: 34px 24px; }
+  .end-card h2 { font-size: 20px; margin-bottom: 6px; }
+  .end-card p { color: var(--iu-anthracite); margin: 6px auto 16px; max-width: 52ch; }
+  .end-card .row { display: flex; gap: 10px; justify-content: center; }
+
+  /* ---------- Right: suggestion queue ---------- */
+  .queue { background: var(--surface); border-left: 1px solid var(--iu-grey-light); display: flex; flex-direction: column; min-height: 0; }
+  .q-head { padding: 16px 18px 12px; border-bottom: 1px solid var(--iu-grey-light); }
+  .q-head h2 { font-size: 16px; display: flex; align-items: baseline; gap: 8px; }
+  .q-head h2 span { font-size: 13px; font-weight: 400; color: var(--iu-anthracite); }
+  .q-sum { font-size: 13px; color: var(--iu-anthracite); margin: 4px 0 8px; }
+  .q-sum b { color: var(--iu-black); }
+  .q-bar { height: 6px; border-radius: 6px; background: var(--iu-grey-light); display: flex; overflow: hidden; }
+  .q-bar i { display: block; height: 100%; transition: width .4s; }
+  .q-filter { margin-top: 10px; }
+  .q-list { flex: 1; overflow-y: auto; padding: 6px 0 16px; }
+  .grp { border-bottom: 1px solid var(--iu-grey-light); }
+  .grp-h { width: 100%; border: 0; background: none; display: flex; align-items: center; gap: 8px; padding: 10px 18px; cursor: pointer; font-size: 14px; font-weight: 700; color: var(--iu-black); text-align: left; }
+  .grp-h:hover { background: #FAFAFB; }
+  .grp-h .cnt { font-weight: 400; color: var(--iu-anthracite); font-size: 12.5px; }
+  .grp-h .togo { margin-left: auto; font-size: 12px; font-weight: 500; color: var(--iu-anthracite); }
+  .grp-h .chev { transition: transform .2s; color: var(--iu-anthracite); }
+  .grp.open .grp-h .chev { transform: rotate(90deg); }
+  .grp-items { display: none; padding: 0 8px 8px; }
+  .grp.open .grp-items { display: block; }
+  .qi { width: 100%; border: 0; background: none; display: flex; gap: 9px; align-items: flex-start; text-align: left; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-size: 13px; color: var(--iu-black); }
+  .qi:hover { background: var(--surface-soft); }
+  .qi.cur { background: var(--iu-blue-tint); box-shadow: inset 3px 0 0 var(--iu-blue); }
+  .qi .ic { width: 16px; height: 16px; border-radius: 50%; flex-shrink: 0; margin-top: 2px; display: grid; place-items: center; }
+  .qi .ic svg { width: 10px; height: 10px; }
+  .ic.pending { border: 2px solid var(--iu-grey); }
+  .ic.cur { border: 2px solid var(--iu-blue); background: #fff; box-shadow: inset 0 0 0 3px #fff, inset 0 0 0 8px var(--iu-blue); }
+  .ic.accepted, .ic.edited { background: var(--ins-line); color: #fff; }
+  .ic.rejected { background: #E7A3A3; color: #fff; }
+  .qi .t { min-width: 0; }
+  .qi .t small { display: block; font-size: 11.5px; color: var(--iu-anthracite); }
+  .qi.done .t { color: var(--iu-anthracite); }
+  .qi .sz { margin-left: auto; font-size: 10.5px; color: var(--purple); font-weight: 700; flex-shrink: 0; margin-top: 2px; }
+  .q-empty { padding: 4px 12px 6px 36px; font-size: 12.5px; color: var(--pending-fg); }
+  .q-foot { border-top: 1px solid var(--iu-grey-light); padding: 10px 18px; font-size: 12px; color: var(--iu-anthracite); }
+
+  /* ---------- Bottom: handoff ---------- */
+  .handoff { flex-shrink: 0; background: var(--surface); box-shadow: 0 -6px 20px rgba(0,0,0,.08); padding: 12px 28px; display: flex; align-items: center; gap: 20px; position: relative; z-index: 20; }
+  .flow { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+  .flow .step { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; padding: 4px 12px; border-radius: 40px; background: var(--pending-bg); color: var(--pending-fg); white-space: nowrap; }
+  .flow .step.now { background: #fff; color: var(--iu-blue); box-shadow: inset 0 0 0 2px var(--iu-blue); font-weight: 700; }
+  .flow .arr { color: var(--iu-grey); }
+  .handoff .note { font-size: 13.5px; color: var(--iu-anthracite); flex: 1; min-width: 0; }
+  .handoff .note b { color: var(--iu-black); }
+  .pub-wrap { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+  .pub-wrap small { font-size: 11.5px; color: var(--pending-fg); }
+
+  /* Toast */
+  .toast { position: fixed; left: 50%; top: 120px; transform: translate(-50%, -12px); opacity: 0; pointer-events: none; z-index: 90; background: var(--navy); color: #fff; padding: 11px 20px; border-radius: 8px; box-shadow: var(--shadow); font-size: 14px; transition: all .25s; max-width: 560px; text-align: center; }
+  .toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+  /* ---------- PM view: annotation layer ---------- */
+  .pm-layer { position: fixed; inset: 0; pointer-events: none; z-index: 60; display: none; }
+  body.pm .pm-layer { display: block; }
+  .pm-lines { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+  .pm-lines path { fill: none; stroke: var(--pm-line); stroke-width: 1.5; stroke-dasharray: 4 4; }
+  .pm-pin { position: fixed; width: 24px; height: 24px; margin: -12px 0 0 -12px; border-radius: 50%; background: var(--pm-fg); color: #fff; font-size: 12px; font-weight: 700; display: grid; place-items: center; box-shadow: 0 0 0 4px var(--pm-glow); pointer-events: auto; cursor: pointer; }
+  .pm-note { position: fixed; width: 300px; background: var(--pm-bg); border: 1px solid var(--pm-soft); border-left: 4px solid var(--pm-fg); border-radius: 4px 8px 8px 4px; padding: 8px 11px 9px; font-size: 12px; line-height: 1.42; color: var(--pm-ink); box-shadow: 0 10px 24px var(--pm-glow); pointer-events: auto; }
+  .pm-note .h { display: flex; align-items: center; gap: 6px; font-size: 10.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--pm-fg); margin-bottom: 2px; }
+  .pm-note .h .x { margin-left: auto; border: 0; background: none; color: var(--pm-fg); cursor: pointer; font-size: 14px; line-height: 1; padding: 0 2px; }
+  .pm-note b { color: var(--pm-fg); }
+  .pm-note .hl { font-weight: 700; color: var(--pm-fg); font-size: 12.5px; line-height: 1.35; margin: 2px 0 4px; }
+  .pm-note .q { margin: 5px 0 0; padding-left: 9px; border-left: 2px solid var(--pm-soft); font-style: italic; }
+  .pm-note .q cite { display: block; font-style: normal; font-size: 10.5px; font-weight: 700; color: var(--pm-line); margin-top: 1px; }
+  .pm-note .sup { margin-top: 5px; }
+  .pm-note.min { display: none !important; }
+  body.pm .pm-target { outline: 2px dashed var(--pm-line); outline-offset: 3px; border-radius: 6px; }
+
+  /* ---------- Responsive (desktop-first) ---------- */
+  @media (max-width: 1320px) {
+    .course-id .eyebrow { display: none; }
+    .stepper .pill--completed .lbl { display: none; }
+    .prog .bar { width: 160px; }
+    .flow .step:not(.now) { display: none; }
+    .flow .arr { display: none; }
+  }
+  @media (max-width: 1180px) {
+    .cockpit { grid-template-columns: minmax(0, 1fr) 300px; }
+    .status-w .opt { display: none; }
+    body.pm .stage { margin-left: 310px; max-width: calc(100% - 320px); }
+    .pm-note { width: 290px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="mock-banner">MOCKUP — not functional, for illustration only.</div>
+
+<header class="topbar">
+  <img src="../assets/f1a8a57a3a249a21.png" alt="IU">
+  <div class="course-id">
+    <div class="eyebrow">Large Revision · Course</div>
+    <div class="name">Grundlagen der Neueren deutschen Literaturwissenschaft <span class="code">(DLBAGRMGNDL01)</span></div>
+  </div>
+  <nav class="stepper" aria-label="Revision steps">
+    <div class="pill pill--completed"><svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="lbl">1 · Structure / Learning Objectives</span></div>
+    <div class="conn done"></div>
+    <div class="pill pill--active" aria-current="step">2 · Content <span class="sub" id="stepSub">7 of 41</span></div>
+    <div class="conn"></div>
+    <div class="pill pill--pending" title="AI Editor Review of the whole course book">3 · Review</div>
+  </nav>
+  <div class="top-right">
+    <label class="pm-toggle" id="pmToggle" title="Show product-management annotations">
+      <span class="switch" aria-hidden="true"></span> PM view
+    </label>
+    <div class="avatar" title="You (module owner)" aria-label="Your account">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="2"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    </div>
+  </div>
+</header>
+
+<!-- Progress + status/visibility. Real version: counts from the revision engine's suggestion set; status from the course-version workflow -->
+<div class="ctxbar">
+  <div class="prog">
+    <div class="big" id="progBig">Suggestion 7 <span>of 41</span></div>
+    <div class="bar" id="progBar" title="Decided so far"><i class="b-acc"></i><i class="b-rej"></i></div>
+    <div class="meta" id="progMeta">15 of 41 decided</div>
+  </div>
+  <button class="status-w" id="statusWidget" aria-haspopup="true">
+    <span class="dot" aria-hidden="true"></span><b>Draft</b>
+    <span class="sep">·</span><span class="opt">last saved <span id="savedAgo">2 min ago</span></span>
+    <span class="sep opt">·</span><span>AI Editor Review: <span id="revState">not started</span></span>
+    <span class="sep">·</span><span>Publication: —</span>
+    <div class="status-pop" id="statusPop" role="dialog" aria-label="Where your revision stands">
+      <ol class="tl">
+        <li class="now"><b>Draft</b> — you're working on it<small>Only you can see these changes. Last saved <span class="savedAgo2">2 min ago</span>.</small></li>
+        <li id="tlReview"><b>3 · Review — AI Editor Review</b> — <span id="tlRevText">not started</span><small>Runs over the whole course book once you’ve decided all suggestions.</small></li>
+        <li><b>Publication</b> — not scheduled<small>You publish. You'll get a notification the moment your corrections are live for students.</small></li>
+      </ol>
+    </div>
+  </button>
+</div>
+
+<!-- PM view evidence banner — headline finding from "Main Outputs from MVs — Discoveries & Testing" (06/25, 04/26, 05/26).
+     All MV attributions on this screen are anonymous by design. -->
+<div class="pm-bar" role="note">
+  <span class="pm-kicker">MV evidence</span>
+  <span class="thesis">Across discovery and testing, the evidence supports <b>professor-led revision with targeted AI assistance</b> over full automation. MVs want <b>less administrative work — not less control over academic decisions.</b>
+    <span class="src-line">Source: “Main Outputs from MVs — Discoveries &amp; Testing” (06/25, 04/26, 05/26).</span></span>
+  <button class="pm-all" id="pmAll">Hide notes</button>
+</div>
+
+<main class="cockpit">
+  <!-- ================= CENTER: the one suggestion in focus ================= -->
+  <section class="center col-scroll" id="center" aria-label="Current suggestion">
+    <div class="stage" id="stage"><!-- rendered by renderFocus() --></div>
+  </section>
+
+  <!-- ================= RIGHT: suggestion queue ================= -->
+  <aside class="queue" aria-label="All suggestions">
+    <div class="q-head" id="queueHead">
+      <h2>All suggestions <span id="qTotal">41</span></h2>
+      <div class="q-sum" id="qSum"></div>
+      <div class="q-bar" id="qBar"><i style="background:var(--ins-line)"></i><i style="background:#E7A3A3"></i></div>
+      <div class="seg q-filter" id="qFilter">
+        <button class="on" data-f="all">All</button><button data-f="todo">To do</button><button data-f="done">Done</button>
+      </div>
+    </div>
+    <div class="q-list" id="qList"></div>
+    <div class="q-foot">Grouped by type. Open a group to see its suggestions — you can take them in any order.</div>
+  </aside>
+</main>
+
+<!-- ================= BOTTOM: handoff / publication ================= -->
+<footer class="handoff">
+  <div class="flow" aria-label="Where you are">
+    <span class="step now">You decide, one by one</span><span class="arr">›</span>
+    <span class="step">3 · Review: AI Editor Review</span><span class="arr">›</span>
+    <span class="step">You publish</span>
+  </div>
+  <div class="note"><b>Next: AI Editor Review.</b> You still hold publishing authority — nothing changes for students until you publish after the review, and you'll be told when it's live.</div>
+  <div class="pub-wrap">
+    <!-- Real version: enabled when every suggestion is decided; hands the draft to step 3 · Review (AI Editor Review). Publishing happens after that step. -->
+    <button class="btn btn-primary" id="pubBtn" disabled title="Available when every suggestion is decided">Continue to AI Editor Review →</button>
+    <small id="pubNote">26 suggestions still open</small>
+  </div>
+</footer>
+
+<button class="sel-ask" id="selAsk" type="button">
+  <svg width="12" height="12" viewBox="0 0 24 24"><path d="M12 3l1.8 4.9L19 9.7l-4.2 3 1.4 5.3L12 15l-4.2 3 1.4-5.3L5 9.7l5.2-1.8z" fill="currentColor"/></svg>Ask AI about this
+</button>
+<div class="pm-layer" id="pmLayer" aria-hidden="true"><svg class="pm-lines" id="pmLines"></svg></div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* =====================================================================
+   HELPERS
+   ===================================================================== */
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+const slug = s => s.toLowerCase().replace(/[^a-z]+/g, '-');
+const LOCK_SVG = '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2" stroke="currentColor" stroke-width="2.4"/><path d="M8 11V8a4 4 0 118 0v3" stroke="currentColor" stroke-width="2.4"/></svg>';
+const SPARK = '<svg width="12" height="12" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l1.8 4.9L19 9.7l-4.2 3 1.4 5.3L12 15l-4.2 3 1.4-5.3L5 9.7l5.2-1.8z" fill="currentColor"/></svg>';
+let toastT;
+function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), 3200); }
+
+/* =====================================================================
+   HARD-CODED SUGGESTION SET (41)
+   Real version: produced by the revision engine for course version DLBAGRMGNDL01 (001-v3-2026-0608),
+   one record per suggestion with type, size, anchor in the DITA source and status.
+   Section numbers follow the real table of contents of the course book.
+   The MV has already cleared suggestions 1–6 and the quick citation batch (28–36) → 12 accepted · 3 rejected · 26 to go.
+   ===================================================================== */
+const TYPES = ['Clarity', 'Structure', 'Job-readiness', 'Citation', 'Compliance'];
+const S = (n, type, size, sec, label, status = 'pending') => ({ n, type, size, sec, label, status });
+const SUGG = [
+  S(1,  'Clarity',       'minor', '1.1', 'Shorten the long opening sentence', 'accepted'),
+  S(2,  'Structure',     'major', '1.2', 'Move the timeline figure before the first example', 'accepted'),
+  S(3,  'Job-readiness', 'major', '1.2', 'Link philology to today’s editorial work', 'accepted'),
+  S(4,  'Clarity',       'minor', '2.1', 'Explain „ars bene dicendi“ on first use', 'rejected'),
+  S(5,  'Compliance',    'minor', '2.1', 'Gender-sensitive wording in one paragraph', 'accepted'),
+  S(6,  'Structure',     'major', '2.2', 'Add a short summary at the end of 2.2', 'accepted'),
+  S(7,  'Clarity',       'major', '3.2', 'Split the long Distant-Reading passage'),
+  S(8,  'Clarity',       'minor', '3.2', 'Fix sentence structure (Topic Modeling)'),
+  S(9,  'Clarity',       'minor', '3.2', 'Singular/plural agreement (digital editions)'),
+  S(10, 'Job-readiness', 'major', '3.2', 'Connect digital archives to career fields'),
+  S(11, 'Compliance',    'minor', '3.2', 'Add alt text to Abbildung 5'),
+  S(12, 'Structure',     'major', '3.3', 'Compare edition types in a small table'),
+  S(13, 'Clarity',       'minor', '4.1', 'Shorten the definition of „Gattung“'),
+  S(14, 'Job-readiness', 'major', '4.2', 'Add a practice task: analysing song lyrics'),
+  S(15, 'Clarity',       'minor', '4.2', 'Explain „Enjambement“ on first use'),
+  S(16, 'Structure',     'major', '4.3', 'Split 4.3 Drama into two learning cycles'),
+  S(17, 'Clarity',       'minor', '4.3', 'Simplify the passage on the closed form'),
+  S(18, 'Compliance',    'minor', '4.4', 'Add alt text to three figures'),
+  S(19, 'Job-readiness', 'major', '4.4', 'Add an example from publishing (Lektorat)'),
+  S(20, 'Clarity',       'minor', '4.5', 'Clarify „literarische Gebrauchsformen“'),
+  S(21, 'Structure',     'major', '4.5', 'Move the history of the Hörspiel into a box'),
+  S(22, 'Clarity',       'minor', '5.1', 'Shorten the overview of the Aufklärung'),
+  S(23, 'Structure',     'major', '5.1', 'Add an epoch timeline at the start of 5.1'),
+  S(24, 'Compliance',    'minor', '5.1', 'Mark primary-source quotations consistently'),
+  S(25, 'Clarity',       'minor', '5.1', 'Break up the long paragraph on the Romantik'),
+  S(26, 'Job-readiness', 'major', '5.2', 'Canon debates in cultural institutions'),
+  S(27, 'Clarity',       'minor', '5.2', 'Tighten the conclusion of 5.2'),
+  S(28, 'Citation',      'minor', '3.1', 'Page-reference format in a citation', 'accepted'),
+  S(29, 'Citation',      'minor', '3.1', 'Order of years in a multi-year citation', 'accepted'),
+  S(30, 'Citation',      'minor', '3.2', 'Add a page range to a citation', 'rejected'),
+  S(31, 'Citation',      'minor', '3.2', 'APA German: „n.d.“ → „o. J.“', 'accepted'),
+  S(32, 'Citation',      'minor', '3.2', 'Add a missing DOI', 'accepted'),
+  S(33, 'Citation',      'minor', '3.2', 'Point to a newer edition of a handbook', 'rejected'),
+  S(34, 'Citation',      'minor', 'Lit.', 'Add edition (4. Aufl.) to an entry', 'accepted'),
+  S(35, 'Citation',      'minor', 'Lit.', 'Repair a line-broken DOI', 'accepted'),
+  S(36, 'Citation',      'minor', 'Lit.', 'Unify „Hrsg.“ punctuation', 'accepted'),
+  S(37, 'Job-readiness', 'major', '6.1', 'Update job profiles in publishing & media'),
+  S(38, 'Clarity',       'minor', '6.2', 'Shorten the passage on adult education'),
+  S(39, 'Job-readiness', 'minor', '6.3', 'Name digital skills asked for in archives'),
+  S(40, 'Structure',     'major', '6.4', 'Group creative careers into three clusters'),
+  S(41, 'Compliance',    'minor', '6.5', 'Neutral wording in the politics section')
+];
+const byN = n => SUGG.find(s => s.n === n);
+
+/* =====================================================================
+   HARD-CODED DETAIL for the suggestions this mockup can show (7–11).
+   Original text = verbatim from the course book DLBAGRMGNDL01 (v001, pp. 61–64).
+   Proposed text = canned revision-engine output.
+   protect = items the engine and the AI helper must never alter (real version: detected from
+   <xref>/<cite>, glossary terms, numbers and figure sources in the DITA source).
+   ===================================================================== */
+const L3 = 'Lektion 3 · Theorien und Methoden der Literaturwissenschaft', S32 = '3.2 Digitale Forschungsmethoden';
+const DETAIL = {
+  7: {
+    where: [L3, S32, 'Quantitative Analyse/Distant Reading', 61],
+    why: ['Clarity', 'Two sentences with 76 words and a long insertion between dashes. Splitting them into four shorter sentences makes the argument easier to follow. Meaning, sources and terms stay the same.'],
+    before: 'Hierbei kommen in der Regel spezialisierte Softwareprogramme wie „Voyant Tools“ oder „R“ in Verbindung mit textanalytischen Bibliotheken zum Einsatz, welche Daten aus Textkorpora extrahieren und visualisieren können (Jockers, 2013; Sinclair, 1991).',
+    orig: 'Ein Beispiel für die Anwendung des „Distant Reading“ – einer von Franco Moretti geprägten Methode, die eng mit der quantitativen Analyse verbunden ist – findet sich in seiner Untersuchung von über 7.000 britischen Romanen des 18. und 19. Jahrhunderts (Moretti, 2005). Morettis Konzept des „Distant Reading“ zielt darauf ab, literarische Entwicklungen nicht durch die Lektüre einzelner Werke zu verstehen, sondern durch die Analyse größerer, oft übersehener literarischer Trends und makrohistorischer Muster, die sich über Zeit und Raum erstrecken.',
+    prop: 'Franco Moretti prägte die Methode des „Distant Reading“, die eng mit der quantitativen Analyse verbunden ist. Ein Beispiel ist seine Untersuchung von über 7.000 britischen Romanen des 18. und 19. Jahrhunderts (Moretti, 2005). Moretti will literarische Entwicklungen nicht durch die Lektüre einzelner Werke verstehen. Stattdessen analysiert er größere, oft übersehene literarische Trends und makrohistorische Muster, die sich über Zeit und Raum erstrecken.',
+    protect: [['„Distant Reading“', 'term'], ['(Moretti, 2005)', 'citation'], ['7.000', 'figure']],
+    margin: ['Distant Reading', 'eine literaturwissenschaftliche Methode, bei der große Mengen von Texten mittels computergestützter Verfahren quantitativ analysiert werden'],
+    after: 'Dies eröffnet neue Zugänge zur literaturwissenschaftlichen Analyse, die sich von der traditionellen ästhetischen Bewertung abheben und stattdessen die Dynamik literarischer Bewegungen und ihre kulturelle Wirkung in den Fokus rücken (Moretti, 2013).',
+    // Canned answers of the on-demand AI helper. Real version: LLM call scoped to the selection, with the protect list enforced.
+    ai: {
+      intro: 'Wie verändert sich unser Blick auf Literatur, wenn wir nicht einen Roman lesen, sondern über 7.000? Genau das zeigt Franco Moretti mit seiner Methode des „Distant Reading“, die eng mit der quantitativen Analyse verbunden ist (Moretti, 2005). Statt einzelne Werke genau zu lesen, untersucht er britische Romane des 18. und 19. Jahrhunderts als Ganzes – und macht so größere, oft übersehene Trends und makrohistorische Muster sichtbar, die sich über Zeit und Raum erstrecken.',
+      tighten: 'Franco Moretti prägte das „Distant Reading“, eine eng mit der quantitativen Analyse verbundene Methode. Er untersuchte über 7.000 britische Romane des 18. und 19. Jahrhunderts (Moretti, 2005), um nicht einzelne Werke, sondern übergreifende Trends und makrohistorische Muster über Zeit und Raum hinweg zu erkennen.',
+      simple: 'Franco Moretti hat die Methode des „Distant Reading“ geprägt. Dabei wertet man sehr viele Texte mit dem Computer aus. So hat Moretti über 7.000 britische Romane des 18. und 19. Jahrhunderts untersucht (Moretti, 2005). Er wollte nicht einzelne Bücher verstehen, sondern große Muster, die sich über lange Zeiträume zeigen.'
+    }
+  },
+  8: {
+    where: [L3, S32, 'Natural Language Processing (NLP)', 63],
+    why: ['Clarity', 'The sentence has two main verbs that don’t fit together („ist …, findet sich …“). One small grammar fix — nothing else changes.'],
+    before: 'Hierbei kamen Verfahren wie Named Entity Recognition (NER) und Part-of-Speech-Tagging (POS) zum Einsatz, um Entitäten wie Personen und Orte sowie ihre grammatischen Rollen innerhalb der Texte zu identifizieren und die Beziehungen sowie sozialen Konstellationen der Figuren zu analysieren (Fischer et al., 2019).',
+    orig: 'Ein weiteres Beispiel ist das sogenannte Topic Modeling, findet sich im Kooperationsprojekt „ePoetics“ der Technischen Universität Darmstadt und der Universität Stuttgart. Das Projekt analysierte ein Korpus von 20 deutschsprachigen Poetiken aus dem Zeitraum von 1770 bis 1960.',
+    prop: 'Ein weiteres Beispiel, das sogenannte Topic Modeling, findet sich im Kooperationsprojekt „ePoetics“ der Technischen Universität Darmstadt und der Universität Stuttgart. Das Projekt analysierte ein Korpus von 20 deutschsprachigen Poetiken aus dem Zeitraum von 1770 bis 1960.',
+    protect: [['Topic Modeling', 'term'], ['„ePoetics“', 'term'], ['1770 bis 1960', 'figure']],
+    margin: ['Topic Modeling', 'ein Verfahren der natürlichen Sprachverarbeitung (NLP), das verwendet wird, um versteckte thematische Strukturen in großen Textsammlungen zu erkennen'],
+    after: 'Als Ergebnis entstand ein digitalisiertes, TEI-konformes (Text Encoding Initiative) Korpus poetologischer Texte, in dem zentrale Konzepte der Sprach- und Literaturtheorie mithilfe von XML-Auszeichnungen systematisiert wurden.'
+  },
+  9: {
+    where: [L3, S32, 'Digitale Archive/Datenbanken', 64],
+    why: ['Consistency', '„Editionen“ is plural, so the verbs that refer to it should be plural too („bieten“, „verknüpfen“).'],
+    before: 'Überdies stehen die Texte frei zugänglich zum Download zur Verfügung, was eine umfassende Nachnutzung für sprach- und literaturwissenschaftliche Studien ermöglicht (Deutsches Textarchiv, n.d.; Horstmann & Kern, 2018).',
+    orig: 'Ein weiteres Beispiel stellen digitale Editionen von Goethes Briefen, Tagebüchern und Gesprächen dar, die von verschiedenen Verlagen bereitgestellt werden. Sie bietet nicht nur Zugang zu Goethes vollständiger Korrespondenz, sondern verknüpft diese mit weiteren biografischen und historischen Kontextinformationen.',
+    prop: 'Ein weiteres Beispiel stellen digitale Editionen von Goethes Briefen, Tagebüchern und Gesprächen dar, die von verschiedenen Verlagen bereitgestellt werden. Sie bieten nicht nur Zugang zu Goethes vollständiger Korrespondenz, sondern verknüpfen diese mit weiteren biografischen und historischen Kontextinformationen.',
+    protect: [],
+    after: 'Solche Editionen gehen über die reine Digitalisierung hinaus und bieten durch die Einbettung in umfassende Metadaten und Annotationssysteme ein wertvolles Instrumentarium für die literaturwissenschaftliche Analyse.'
+  },
+  10: {
+    where: [L3, S32, 'Digitale Archive/Datenbanken', 64],
+    why: ['Job-readiness', 'Connects the method to the career fields in Lektion 6 and to the module content „Berufsfelder“. It adds a new statement, so it counts as a larger change.'],
+    before: 'Solche Editionen gehen über die reine Digitalisierung hinaus und bieten durch die Einbettung in umfassende Metadaten und Annotationssysteme ein wertvolles Instrumentarium für die literaturwissenschaftliche Analyse.',
+    orig: 'Der Nutzen digitaler Archive und Datenbanken liegt jedoch nicht nur im vereinfachten Zugang zu den Texten selbst, sondern auch in ihrer Funktion als Werkzeuge für neue Analyseformen. Mithilfe von Datenbanken wie „TextGrid“ können Forscherinnen und Forscher kollaborativ an Editionen arbeiten, Annotationen erstellen und Korpora verwalten. Solche Plattformen bieten zudem technische Infrastrukturen für die Speicherung und Analyse großer Textmengen, was insbesondere für Forschungsprojekte von Bedeutung ist, die sich mit umfangreichen Korpora befassen (TextGrid Konsortium, 2006–2014; Neuroth et al., 2015).',
+    prop: 'Der Nutzen digitaler Archive und Datenbanken liegt jedoch nicht nur im vereinfachten Zugang zu den Texten selbst, sondern auch in ihrer Funktion als Werkzeuge für neue Analyseformen. Mithilfe von Datenbanken wie „TextGrid“ können Forscherinnen und Forscher kollaborativ an Editionen arbeiten, Annotationen erstellen und Korpora verwalten. Solche Plattformen bieten zudem technische Infrastrukturen für die Speicherung und Analyse großer Textmengen, was insbesondere für Forschungsprojekte von Bedeutung ist, die sich mit umfangreichen Korpora befassen (TextGrid Konsortium, 2006–2014; Neuroth et al., 2015). Diese Fähigkeiten sind auch außerhalb der Forschung gefragt: In Verlagen, Bibliotheken und Kultureinrichtungen gehört die Arbeit mit digitalen Archiven und Editionsplattformen zunehmend zum Berufsalltag (siehe Lektion 6).',
+    protect: [['„TextGrid“', 'term'], ['(TextGrid Konsortium, 2006–2014; Neuroth et al., 2015)', 'citation']],
+    after: 'Datenvisualisierung — Durch Datenvisualisierung können große Mengen an Daten, die in der literarischen Textanalyse anfallen, in grafischer Form dargestellt werden, wodurch komplexe Zusammenhänge auf einen Blick erkennbar und zugänglich gemacht werden.'
+  },
+  11: {
+    where: [L3, S32, 'Netzwerkanalyse', 62],
+    why: ['Compliance', 'Accessibility guideline: every figure needs a text alternative for screen readers. The figure itself and its source stay untouched.'],
+    before: 'Ein Beispiel hierfür ist die Untersuchung der Figurenbeziehungen in E. T. A. Hoffmanns Der Sandmann (1816), bei der die sozialen Hierarchien und Wechselwirkungen der Romanfiguren grafisch dargestellt und eingehend analysiert wurden (Schumacher, 2018, § 5):',
+    figure: ['Abbildung 5: Figurenbeziehungen in E. T. A. Hoffmanns Der Sandmann (1816)', 'Quelle: Schumacher, 2018.'],
+    orig: 'Alternativtext: (fehlt)',
+    prop: 'Alternativtext: Netzwerkdiagramm der Figuren in „Der Sandmann“. Nathanael steht als größter Knoten im Zentrum. Klara, Coppelius, die Mutter, der Vater und Spalanzani sind eng mit ihm verbunden; Nebenfiguren wie die alte Frau und die Studenten liegen am Rand.',
+    protect: [],
+    after: 'Die Größe der Knoten (Kreisflächen) spiegelt die zentrale Bedeutung der jeweiligen Figur innerhalb des Netzwerks wider – je größer der Knoten, desto wichtiger ist die Figur in Bezug auf ihre Verknüpfungen und Interaktionen mit anderen Charakteren.'
+  }
+};
+const PROTECT_KIND = { term: 'Technical term', citation: 'Citation', figure: 'Number / data', formula: 'Formula' };
+
+/* =====================================================================
+   STATE (all in memory — reload resets the demo)
+   ===================================================================== */
+let cur = 7;
+let editing = false;
+let viewMode = 'inline';
+let freshCard = true;
+const propOverride = {};   // n → text chosen via Edit or the AI helper
+const aiUsed = {};         // n → true if the MV took over AI wording
+const openGroups = new Set(['Clarity']);
+let qFilter = 'all';
+let savedAgo = '2 min ago';
+const propOf = n => propOverride[n] ?? DETAIL[n].prop;
+
+/* =====================================================================
+   WORD DIFF with atomic protected items
+   Real version: server-side diff on the DITA text nodes.
+   ===================================================================== */
+function tokens(text, prot) {
+  let t = text;
+  prot.forEach(([p], i) => { t = t.split(p).join('\u0001' + i + '\u0002'); });
+  return t.split(/\s+/).filter(Boolean);
+}
+function diffOps(a, b) {
+  const n = a.length, m = b.length;
+  const dp = Array.from({ length: n + 1 }, () => new Array(m + 1).fill(0));
+  for (let i = n - 1; i >= 0; i--) for (let j = m - 1; j >= 0; j--)
+    dp[i][j] = a[i] === b[j] ? dp[i + 1][j + 1] + 1 : Math.max(dp[i + 1][j], dp[i][j + 1]);
+  const ops = []; let i = 0, j = 0;
+  while (i < n && j < m) {
+    if (a[i] === b[j]) { ops.push(['eq', a[i]]); i++; j++; }
+    else if (dp[i + 1][j] >= dp[i][j + 1]) { ops.push(['del', a[i]]); i++; }
+    else { ops.push(['ins', b[j]]); j++; }
+  }
+  while (i < n) ops.push(['del', a[i++]]);
+  while (j < m) ops.push(['ins', b[j++]]);
+  return ops;
+}
+function lockHTML(p, editable) {
+  return `<span class="lock" ${editable ? 'contenteditable="false"' : ''} title="${PROTECT_KIND[p[1]]} — protected, won’t be altered">${LOCK_SVG}${esc(p[0])}</span>`;
+}
+function tokHTML(w, prot, editable) {
+  return esc(w).replace(/\u0001(\d+)\u0002/g, (_, i) => lockHTML(prot[+i], editable));
+}
+function cleanHTML(text, prot, editable) { return tokens(text, prot).map(w => tokHTML(w, prot, editable)).join(' '); }
+function diffHTML(orig, prop, prot, side) {           // side: undefined = inline, 'old' | 'new' = one half
+  const ops = diffOps(tokens(orig, prot), tokens(prop, prot));
+  const out = []; let del = [], ins = [], runs = 0;
+  const flush = () => {
+    if (!del.length && !ins.length) return;
+    runs++;
+    if (del.length && side !== 'new') out.push(`<del>${del.map(w => tokHTML(w, prot)).join(' ')}</del>`);
+    if (ins.length && side !== 'old') out.push(`<ins>${ins.map(w => tokHTML(w, prot)).join(' ')}</ins>`);
+    del = []; ins = [];
+  };
+  ops.forEach(([op, w]) => {
+    if (op === 'eq') { flush(); out.push(tokHTML(w, prot)); }
+    else (op === 'del' ? del : ins).push(w);
+  });
+  flush();
+  return { html: out.join(' '), runs };
+}
+
+/* =====================================================================
+   ▼▼▼  SUGGESTION-REVIEW INTERACTION SLOT  ▼▼▼
+   This is the hook for iterating on a custom suggestion-review interaction.
+   Each entry renders the change for the current suggestion into the diff area.
+   To try a new idea: add an entry here { label, render(ctx) } — it shows up
+   automatically in the "How to show the change" switch. ctx = { orig, prop, prot, area }.
+   Default stays 'inline' (simple, obvious at a glance).
+
+   Proposal included: 'hold' — "Hold to compare". No red/green at all: you read the
+   new text as students will see it; press and hold to see the original in the same
+   place, let go to come back. One gesture, no diff vocabulary to learn — aimed at
+   MVs who find tracked-changes noise tiring.
+   ===================================================================== */
+const REVIEW_INTERACTIONS = {
+  inline: {
+    label: 'Show changes',
+    render: ({ orig, prop, prot, area }) => { const d = diffHTML(orig, prop, prot); area.innerHTML = d.html; return d.runs; }
+  },
+  side: {
+    label: 'Side by side',
+    render: ({ orig, prop, prot, area }) => {
+      const a = diffHTML(orig, prop, prot, 'old'), b = diffHTML(orig, prop, prot, 'new');
+      area.innerHTML = `<div class="sbs"><div><div class="h">Now in your book</div>${a.html}</div><div class="new"><div class="h">Suggested</div>${b.html}</div></div>`;
+      return a.runs;
+    }
+  },
+  hold: {
+    label: 'Hold to compare',
+    render: ({ orig, prop, prot, area }) => {
+      const showNew = () => { area.querySelector('.hold-label').className = 'hold-label new'; area.querySelector('.hold-label').textContent = 'Suggested'; area.querySelector('.hold-text').innerHTML = cleanHTML(prop, prot); };
+      const showOld = () => { area.querySelector('.hold-label').className = 'hold-label old'; area.querySelector('.hold-label').textContent = 'Original'; area.querySelector('.hold-text').innerHTML = cleanHTML(orig, prot); };
+      area.innerHTML = `<div class="hold-wrap"><span class="hold-label new">Suggested</span><div class="hold-text"></div>
+        <button class="hold-btn" type="button">Press and hold to see the original</button></div>`;
+      showNew();
+      const btn = area.querySelector('.hold-btn');
+      const down = e => { e.preventDefault(); btn.classList.add('down'); showOld(); };
+      const up = () => { btn.classList.remove('down'); showNew(); };
+      btn.addEventListener('pointerdown', down);
+      ['pointerup', 'pointerleave', 'pointercancel'].forEach(ev => btn.addEventListener(ev, up));
+      return diffHTML(orig, prop, prot).runs;
+    }
+  }
+  // myIdea: { label: 'My idea', render: (ctx) => { ctx.area.innerHTML = '…'; return 1; } },
+};
+/* ▲▲▲  END OF SLOT  ▲▲▲ */
+
+/* =====================================================================
+   RENDER: progress, status, queue, handoff
+   ===================================================================== */
+function counts() {
+  const c = { accepted: 0, edited: 0, rejected: 0, pending: 0 };
+  SUGG.forEach(s => c[s.status]++);
+  c.acc = c.accepted + c.edited;
+  c.decided = c.acc + c.rejected;
+  return c;
+}
+function setBar(bar, c) {
+  const [a, j] = bar.querySelectorAll('i'), T = SUGG.length;
+  a.style.width = (c.acc / T * 100) + '%'; j.style.width = (c.rejected / T * 100) + '%';
+}
+function renderProgress() {
+  const c = counts();
+  $('#progBig').innerHTML = `Suggestion ${cur} <span>of ${SUGG.length}</span>`;
+  $('#stepSub').textContent = `${cur} of ${SUGG.length}`;
+  $('#progMeta').textContent = `${c.decided} of ${SUGG.length} decided`;
+  setBar($('#progBar'), c);
+  $('#qSum').innerHTML = `<b>${c.acc}</b> accepted · <b>${c.rejected}</b> rejected · <b>${c.pending}</b> to go`;
+  setBar($('#qBar'), c);
+  $('#pubNote').textContent = c.pending ? `${c.pending} suggestion${c.pending > 1 ? 's' : ''} still open` : 'Ready for AI Editor Review';
+  // status widget — real version: state of the AI Editor Review job for this course version
+  const rv = c.pending ? 'not started' : 'ready to start';
+  $('#revState').textContent = rv; $('#tlRevText').textContent = rv;
+  $('#savedAgo').textContent = savedAgo; $$('.savedAgo2').forEach(x => x.textContent = savedAgo);
+}
+const STATUS_ICON = {
+  accepted: '<svg viewBox="0 0 24 24" fill="none"><path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  edited: '<svg viewBox="0 0 24 24" fill="none"><path d="M4 20l4-1 11-11-3-3L5 16z" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/></svg>',
+  rejected: '<svg viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="3.5" stroke-linecap="round"/></svg>',
+  pending: ''
+};
+const STATUS_WORD = { pending: 'to do', accepted: 'accepted', edited: 'accepted with your edits', rejected: 'rejected' };
+function renderQueue() {
+  const list = $('#qList'); list.innerHTML = '';
+  TYPES.forEach(type => {
+    const all = SUGG.filter(s => s.type === type);
+    const items = all.filter(s => qFilter === 'all' || (qFilter === 'todo' ? s.status === 'pending' : s.status !== 'pending'));
+    const togo = all.filter(s => s.status === 'pending').length;
+    const g = document.createElement('div');
+    g.className = 'grp' + (openGroups.has(type) ? ' open' : '');
+    g.innerHTML = `<button class="grp-h" type="button"><svg class="chev" width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span class="chip t-${slug(type)}">${type}</span><span class="cnt">${all.length}</span><span class="togo">${togo ? togo + ' to go' : 'all done ✓'}</span></button>
+      <div class="grp-items">${items.map(s => {
+        const isCur = s.n === cur;
+        return `<button class="qi ${isCur ? 'cur' : ''} ${s.status !== 'pending' ? 'done' : ''}" data-n="${s.n}" type="button" title="${STATUS_WORD[s.status]}">
+          <span class="ic ${isCur && s.status === 'pending' ? 'cur' : s.status}">${STATUS_ICON[s.status]}</span>
+          <span class="t">${esc(s.label)}<small>#${s.n} · ${s.sec === 'Lit.' ? 'Literaturverzeichnis' : 'Section ' + s.sec} · ${STATUS_WORD[s.status]}</small></span>
+          ${s.size === 'major' ? '<span class="sz">larger</span>' : ''}</button>`;
+      }).join('') || '<div class="q-empty">Nothing here with this filter.</div>'}</div>`;
+    g.querySelector('.grp-h').onclick = () => { openGroups.has(type) ? openGroups.delete(type) : openGroups.add(type); renderQueue(); };
+    list.append(g);
+  });
+  $$('.qi', list).forEach(b => b.onclick = () => goTo(+b.dataset.n));
+}
+
+/* =====================================================================
+   RENDER: the focus card
+   ===================================================================== */
+function renderFocus() {
+  const stage = $('#stage');
+  hideSelAsk();
+  const d = DETAIL[cur], s = byN(cur);
+  if (!d) { renderEnd(stage); return; }
+  const [lesson, section, sub, page] = d.where;
+  const prot = d.protect, prop = propOf(cur), decided = s.status !== 'pending';
+  const figure = d.figure ? `<figure class="fig">${FIG_SVG}<figcaption><b>${esc(d.figure[0])}</b>${lockHTML([d.figure[1], 'citation'])}</figcaption></figure>` : '';
+
+  stage.innerHTML = `
+    <div class="where"><span>${esc(lesson)}</span><span class="chev">›</span><span>${esc(section)}</span><span class="chev">›</span><b>${esc(sub)}</b><span>· p. ${page}</span>
+      <button class="open-ed" id="openEd" type="button">Open this spot in the editor ↗</button></div>
+    <div class="sheet">
+      ${d.margin ? `<aside class="margin-note"><b>${LOCK_SVG.replace('<svg', '<svg width="10" height="10"')}${esc(d.margin[0])}</b>${esc(d.margin[1])}</aside>` : ''}
+      <p class="ctx">${esc(d.before)}</p>
+      <article class="focus-card ${freshCard ? 'enter' : ''}" id="focusCard">
+        <div class="fc-head">
+          <span class="num">Suggestion ${cur}</span>
+          <span class="chip t-${slug(s.type)}">${s.type}</span>
+          <span class="chip size-${s.size}">${s.size === 'major' ? 'Larger change' : 'Small change'}</span>
+          ${aiUsed[cur] ? `<span class="chip ai-badge">${SPARK} includes AI wording you chose</span>` : ''}
+          <span class="fc-state">${decided ? STATUS_WORD[s.status] : 'Take your time — nothing changes until you decide.'}</span>
+        </div>
+        <p class="why"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2"/><path d="M12 11v6M12 7.5v.5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>
+          <span><span class="tag">Why · ${esc(d.why[0])}:</span> ${esc(d.why[1])}</span></p>
+        ${figure}
+        ${editing ? `
+          <div class="edit-box" id="editBox" contenteditable="true" spellcheck="true">${cleanHTML(prop, prot, true)}</div>
+          <div class="edit-hint">Write it the way you want. Grey items with a lock are protected and can’t be changed here.</div>
+          <div class="edit-warn" id="editWarn"></div>` : `
+          <div class="view-row">
+            <span class="lbl">How to show the change</span>
+            <div class="seg" id="viewSeg">${Object.entries(REVIEW_INTERACTIONS).map(([k, v]) => `<button type="button" data-v="${k}" class="${k === viewMode ? 'on' : ''}">${v.label}</button>`).join('')}</div>
+            <span class="legend-mini"><del>removed</del><ins>added</ins></span>
+            <span class="chg-count" id="chgCount"></span>
+          </div>
+          <div class="diff" id="diffArea"></div>`}
+        <div class="protect" id="protectLegend">${protectLegend(prot, prop)}</div>
+        ${editing ? '' : `<div class="ai-row" id="aiRow"><span>Want different wording?</span>
+          <button class="ai-link" id="aiOpen" type="button">${SPARK} Ask AI for help</button><span>or select any words above.</span></div>
+          <div id="aiPanel"></div>`}
+        <div class="decided ${decided ? 'show ' + s.status : ''}" id="decided">${decidedText(s)}<button class="undo" id="undo" type="button">Undo</button></div>
+        <div class="actions" id="actionBar">
+          ${editing ? `
+            <button class="btn btn-primary" id="btnSave" type="button">Save my version</button>
+            <button class="btn btn-secondary" id="btnCancel" type="button">Cancel</button>
+            <span class="spacer"></span><span class="think">Saving counts as “accepted with your edits”.</span>` : `
+            <button class="btn act-accept" id="btnAccept" type="button" ${decided ? 'disabled' : ''}>✓ Accept <kbd>A</kbd></button>
+            <button class="btn btn-secondary" id="btnEdit" type="button" ${decided ? 'disabled' : ''}>✎ Edit <kbd>E</kbd></button>
+            <button class="btn btn-secondary act-reject" id="btnReject" type="button" ${decided ? 'disabled' : ''}>✕ Reject <kbd>R</kbd></button>
+            <span class="spacer"></span>
+            <button class="btn btn-next ${decided ? 'go' : ''}" id="btnNext" type="button" title="${decided ? '' : 'Leave this one open for now'}">${decided ? 'Next suggestion' : 'Next'} → <kbd>N</kbd></button>`}
+        </div>
+      </article>
+      <p class="ctx after">${esc(d.after)}</p>
+    </div>`;
+  freshCard = false;
+
+  if (!editing) {
+    const runs = REVIEW_INTERACTIONS[viewMode].render({ orig: d.orig, prop, prot, area: $('#diffArea') });
+    $('#chgCount').textContent = `${runs} change${runs === 1 ? '' : 's'}`;
+    $$('#viewSeg button').forEach(b => b.onclick = () => { viewMode = b.dataset.v; renderFocus(); });
+    $('#aiOpen').onclick = () => openAi('');
+    $('#diffArea').addEventListener('mouseup', onSelect);
+    $('#btnAccept').onclick = () => decide('accepted');
+    $('#btnReject').onclick = () => decide('rejected');
+    $('#btnEdit').onclick = () => { editing = true; renderFocus(); placeCaret(); };
+    $('#btnNext').onclick = next;
+  } else {
+    $('#btnSave').onclick = saveEdit;
+    $('#btnCancel').onclick = () => { editing = false; renderFocus(); };
+  }
+  $('#undo').onclick = () => { s.status = 'pending'; touch(); renderAll(); };
+  $('#openEd').onclick = () => toast('Mockup: would open page ' + page + ' in the Fonto editor, at this paragraph.');
+}
+function protectLegend(prot, prop) {
+  if (!prot.length) return `<span class="ph">${LOCK_SVG.replace('<svg', '<svg width="12" height="12"')} Protected</span><span>No citations, terms or figures in this passage.</span>`;
+  return `<span class="ph">${LOCK_SVG.replace('<svg', '<svg width="12" height="12"')} Protected — won’t be altered:</span>` +
+    prot.map(p => `<span class="pi"><span class="k">${PROTECT_KIND[p[1]]}</span>${esc(p[0])} ${prop.includes(p[0]) ? '<span class="ok" title="Unchanged in the suggestion">✓</span>' : '<span style="color:var(--del-fg)">missing</span>'}</span>`).join('');
+}
+function decidedText(s) {
+  return ({
+    accepted: '✓ Accepted. The new text is in your draft.',
+    edited: '✓ Your version is in your draft.',
+    rejected: 'Rejected. The original text stays as it is.',
+    pending: ''
+  })[s.status];
+}
+function renderEnd(stage) {
+  const s = byN(cur);
+  stage.innerHTML = `<div class="sheet"><div class="end-card">
+      <h2>That’s the end of this demo</h2>
+      <p>Next up would be <b>#${s.n} · ${s.type} · ${esc(s.label)}</b> (${s.sec === 'Lit.' ? 'Literaturverzeichnis' : 'Section ' + s.sec}). This mockup only fills in suggestions 7–11 — in the real tool you’d simply keep going, at your own pace, and could stop and come back any time.</p>
+      <div class="row"><button class="btn btn-secondary" id="backTo7" type="button">← Back to suggestion 7</button><button class="btn btn-primary" id="restart" type="button">Start the demo over</button></div>
+    </div></div>`;
+  $('#backTo7').onclick = () => goTo(7);
+  $('#restart').onclick = () => location.reload();
+}
+const FIG_SVG = `<svg viewBox="0 0 220 130" role="img" aria-label="Figure preview (placeholder)">
+  <g stroke="#9AA6B2" stroke-width="1.6"><path d="M110 65 L50 30 M110 65 L170 28 M110 65 L175 95 M110 65 L55 100 M110 65 L110 18 M110 65 L112 115 M50 30 L110 18 M170 28 L175 95 M55 100 L20 70 M175 95 L205 118"/></g>
+  <g fill="#2B3845"><circle cx="110" cy="65" r="15"/><circle cx="50" cy="30" r="9"/><circle cx="170" cy="28" r="9"/><circle cx="175" cy="95" r="8"/><circle cx="55" cy="100" r="8"/><circle cx="110" cy="18" r="7"/><circle cx="112" cy="115" r="7"/></g>
+  <g fill="#9AA6B2"><circle cx="20" cy="70" r="4"/><circle cx="205" cy="118" r="4"/></g></svg>`;
+
+/* =====================================================================
+   ACTIONS
+   Real version: each decision is saved immediately to the course version (draft) and audited.
+   ===================================================================== */
+function touch() { savedAgo = 'just now'; }
+function decide(status) {
+  const s = byN(cur); if (!DETAIL[cur] || s.status !== 'pending') return;
+  s.status = status; touch(); renderAll();
+}
+function saveEdit() {
+  const box = $('#editBox'), d = DETAIL[cur];
+  const text = (box.innerText ?? box.textContent).replace(/\s+/g, ' ').trim();
+  const missing = d.protect.filter(p => !text.includes(p[0]));
+  if (missing.length) {
+    const w = $('#editWarn');
+    w.innerHTML = `A protected item is missing: <b>${missing.map(p => esc(p[0])).join(', ')}</b>. Protected citations, terms and figures must stay exactly as written. <button class="linklike" id="restoreEd" type="button">Restore them</button>`;
+    w.classList.add('show');
+    $('#restoreEd').onclick = () => { renderFocus(); placeCaret(); };
+    return;
+  }
+  propOverride[cur] = text; byN(cur).status = 'edited'; editing = false; touch(); renderAll();
+}
+function placeCaret() { const b = $('#editBox'); if (!b) return; b.focus(); const r = document.createRange(); r.selectNodeContents(b); r.collapse(false); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); }
+function nextPendingAfter(n) {
+  const order = SUGG.map(s => s.n).sort((a, b) => a - b);
+  return order.find(x => x > n && byN(x).status === 'pending') ?? order.find(x => byN(x).status === 'pending') ?? null;
+}
+function next() {
+  const n = nextPendingAfter(cur);
+  if (n == null) { toast('Everything is decided. Next is step 3 · Review — the AI Editor Review.'); return; }
+  goTo(n);
+}
+function goTo(n) {
+  if (!DETAIL[n] && byN(n).status !== 'pending') { toast('Mockup: only suggestions 7–11 are filled in with text.'); return; }
+  cur = n; editing = false; freshCard = true;
+  openGroups.add(byN(n).type);
+  renderAll();
+  $('#center').scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+/* =====================================================================
+   ON-DEMAND AI HELPER (secondary). All answers canned.
+   Real version: LLM call on the selection only; the protect list is passed as hard constraints
+   and verified afterwards; the result is never applied without the MV.
+   ===================================================================== */
+const PRESETS = [
+  ['intro', 'Make it sound more like the Lektion introduction'],
+  ['tighten', 'Tighten this'],
+  ['simple', 'Use simpler words']
+];
+let aiSel = '';
+function onSelect() {
+  const sel = getSelection(), text = sel.toString().trim();
+  if (text.length < 4 || !sel.rangeCount) { hideSelAsk(); return; }
+  const r = sel.getRangeAt(0).getBoundingClientRect(), b = $('#selAsk');
+  aiSel = text;
+  b.style.left = Math.min(innerWidth - 190, r.right - 60) + 'px'; b.style.top = Math.max(8, r.top - 38) + 'px';
+  b.classList.add('show');
+}
+function hideSelAsk() { $('#selAsk').classList.remove('show'); }
+$('#selAsk').addEventListener('mousedown', e => e.preventDefault());
+$('#selAsk').onclick = () => { hideSelAsk(); openAi(aiSel); };
+document.addEventListener('mousedown', e => { if (!e.target.closest('#selAsk') && !e.target.closest('#diffArea')) hideSelAsk(); });
+$('#center').addEventListener('scroll', hideSelAsk);
+
+function openAi(selText) {
+  const p = $('#aiPanel'); if (!p) return;
+  const short = selText.length > 140 ? selText.slice(0, 140) + '…' : selText;
+  p.innerHTML = `<div class="ai-panel">
+    <div class="h">${SPARK} Ask AI — about ${selText ? 'the words you selected' : 'this passage'}<button class="x" id="aiClose" title="Close">×</button></div>
+    ${selText ? `<div class="sel">“${esc(short)}”</div>` : '<div class="sel">Tip: select words above to ask about just those.</div>'}
+    <div class="presets">${PRESETS.map(([k, l]) => `<button type="button" data-k="${k}">${l}</button>`).join('')}</div>
+    <div class="ask-own"><input id="aiOwn" placeholder="Or say it in your words, e.g. “more concrete, less abstract”"><button type="button" id="aiOwnGo">Ask</button></div>
+  </div>`;
+  $('#aiClose').onclick = () => p.innerHTML = '';
+  $$('.presets button', p).forEach(b => b.onclick = () => runAi(b.dataset.k, b.textContent));
+  $('#aiOwnGo').onclick = () => runAi('intro', $('#aiOwn').value || 'your request');
+  $('#aiOwn').onkeydown = e => { if (e.key === 'Enter') $('#aiOwnGo').click(); };
+}
+function runAi(key, label) {
+  const p = $('#aiPanel'), d = DETAIL[cur];
+  p.innerHTML = `<div class="ai-panel"><div class="h">${SPARK} ${esc(label)}</div><div class="typing"><i></i><i></i><i></i></div></div>`;
+  setTimeout(() => {
+    if (!$('#aiPanel')) return;
+    const text = d.ai && d.ai[key];
+    if (!text) {
+      p.innerHTML = `<div class="ai-panel"><div class="h">${SPARK} ${esc(label)}<button class="x" id="aiClose">×</button></div>
+        <div class="sel">Mockup: a canned AI answer is only filled in for suggestion 7.</div></div>`;
+      $('#aiClose').onclick = () => p.innerHTML = '';
+      return;
+    }
+    const kept = d.protect.filter(x => text.includes(x[0])).map(x => x[0]);
+    p.innerHTML = `<div class="ai-panel">
+      <div class="h">${SPARK} AI proposal — you decide · “${esc(label)}”<button class="x" id="aiClose" title="Discard">×</button></div>
+      <div class="ai-text">${cleanHTML(text, d.protect)}</div>
+      <div class="ai-kept">✓ Protected items kept exactly: ${kept.map(esc).join(' · ')}</div>
+      <div class="ai-acts">
+        <button class="btn btn-sm btn-secondary" id="aiUse" type="button">Use this wording</button>
+        <button class="btn btn-sm btn-secondary" id="aiEdit" type="button">Edit it first</button>
+        <button class="btn btn-sm btn-secondary" id="aiDrop" type="button">Discard</button>
+      </div></div>`;
+    $('#aiClose').onclick = $('#aiDrop').onclick = () => p.innerHTML = '';
+    $('#aiUse').onclick = () => { propOverride[cur] = text; aiUsed[cur] = true; renderFocus(); toast('The AI wording is now the suggestion. Nothing changes in your book until you press Accept.'); };
+    $('#aiEdit').onclick = () => { propOverride[cur] = text; aiUsed[cur] = true; editing = true; renderFocus(); placeCaret(); };
+  }, 1100);
+}
+
+/* =====================================================================
+   STATUS WIDGET, FILTER, KEYBOARD
+   ===================================================================== */
+$('#statusWidget').addEventListener('click', e => { if (!e.target.closest('.status-pop')) $('#statusPop').classList.toggle('open'); });
+document.addEventListener('click', e => { if (!e.target.closest('#statusWidget')) $('#statusPop').classList.remove('open'); });
+$$('#qFilter button').forEach(b => b.onclick = () => {
+  qFilter = b.dataset.f; $$('#qFilter button').forEach(x => x.classList.toggle('on', x === b));
+  if (qFilter !== 'all') TYPES.forEach(t => openGroups.add(t));
+  renderQueue();
+});
+$('#pubBtn').onclick = () => toast('Mockup: would hand your draft to step 3 · Review (AI Editor Review).');
+document.addEventListener('keydown', e => {
+  if (e.target.closest('input, select, textarea, [contenteditable="true"]') || e.metaKey || e.ctrlKey || e.altKey) return;
+  const k = e.key.toLowerCase(), click = id => { const b = $(id); if (b && !b.disabled) b.click(); };
+  if (k === 'a') click('#btnAccept');
+  else if (k === 'e') click('#btnEdit');
+  else if (k === 'r') click('#btnReject');
+  else if (k === 'n' || e.key === 'ArrowRight') click('#btnNext');
+});
+
+function renderAll() { renderProgress(); renderQueue(); renderFocus(); }
+renderAll();
+
+/* =====================================================================
+   PM VIEW — annotation layer
+   Texts are PLACEHOLDERS to be refined; taken from "Main Outputs from MVs — Discoveries & Testing"
+   (sessions 06/25, 04/26, 05/26). Quotes verbatim; every attribution anonymous — no names, no initials.
+   ===================================================================== */
+const Q = (text, who) => `<div class="q">${text}<cite>— MV, ${who}</cite></div>`;
+const PM_NOTES = [
+  { n: 1, col: 'left', anchor: () => $('#actionBar'), pin: r => [r.left + 8, r.top + 8], title: 'Accept · Edit · Reject',
+    html: '<div class="hl">AI is welcomed for proofreading, suggestions and consistency checks, but MVs want to review, reject or adapt its output — accept/reject control, not automatic application.</div>' +
+          Q('“If it would be just AI, I would have a problem with that.”', 'discovery interview') +
+          Q('Manually checks AI suggestions, accepts around 60%.', 'user testing') },
+  { n: 2, col: 'left', anchor: () => $('#btnEdit') || $('#btnSave'), pin: r => [r.right - 6, r.top + 4], title: 'Direct editing · autonomy',
+    html: Q('“The flexibility itself — I’m really happy about that. This is what we’ve been calling for.”', 'discovery interview') +
+          Q('“It’s hard to tell students it takes 4–5 months to get a few numbers changed in the course book.”', 'discovery interview') +
+          '<div class="sup">Direct editing + simpler publication was the <b>top ask</b>.</div>' },
+  { n: 3, col: 'left', anchor: () => $('#protectLegend'), pin: r => [r.left + 8, r.top + 12], title: 'Diff · protection',
+    html: '<div class="hl">Design for verification: show differences clearly and protect references and technical terms.</div>' +
+          Q('AI incorrectly changed citation details and replaced technical terms, changing their meaning.', 'user testing') },
+  { n: 5, col: 'right', anchor: () => $('#statusWidget'), pin: r => [r.left + 10, r.bottom - 4], title: 'Status · visibility',
+    html: Q('“I don’t know who handles my requests or when corrections went live.”', 'discovery interview') +
+          '<div class="sup">Status tracking &amp; publication notifications were an <b>explicit need</b>.</div>' },
+  { n: 4, col: 'right', anchor: () => $('#queueHead'), pin: r => [r.left + 10, r.top + 16], title: 'Manageable queue',
+    html: '<div class="hl">Keep suggestions manageable —</div>' + Q('too many suggestions made it hard to see the actual changes.', 'user testing') }
+];
+const pmLayer = $('#pmLayer'), pmLines = $('#pmLines');
+const closed = new Set();
+PM_NOTES.forEach(c => {
+  c.pinEl = document.createElement('div'); c.pinEl.className = 'pm-pin'; c.pinEl.textContent = c.n; c.pinEl.title = 'PM note ' + c.n + ' — click to show/hide';
+  c.note = document.createElement('div'); c.note.className = 'pm-note';
+  c.note.innerHTML = `<div class="h">${c.n} · MV evidence · ${c.title}<button class="x" title="Hide">×</button></div>${c.html}`;
+  $('.x', c.note).onclick = () => { closed.add(c.n); c.note.classList.add('min'); };
+  c.pinEl.onclick = () => { closed.has(c.n) ? closed.delete(c.n) : closed.add(c.n); c.note.classList.toggle('min', closed.has(c.n)); };
+  pmLayer.append(c.note, c.pinEl);
+});
+$('#pmAll').onclick = () => {
+  const hide = closed.size < PM_NOTES.length;
+  PM_NOTES.forEach(c => { hide ? closed.add(c.n) : closed.delete(c.n); c.note.classList.toggle('min', hide); });
+  $('#pmAll').textContent = hide ? 'Show notes' : 'Hide notes';
+};
+function placeNotes() {
+  if (!document.body.classList.contains('pm')) return;
+  const W = innerWidth, H = innerHeight;
+  const top0 = $('.cockpit').getBoundingClientRect().top + 8;
+  const qr = $('.queue').getBoundingClientRect();
+  $$('.pm-target').forEach(x => x.classList.remove('pm-target'));
+  let lines = '';
+  ['left', 'right'].forEach(col => {
+    const NW = col === 'left' ? Math.min(300, $('#stage').getBoundingClientRect().left - 20) : Math.min(300, qr.width - 28);
+    const xN = col === 'left' ? 10 : qr.left + 14;
+    const items = PM_NOTES.filter(c => c.col === col).map(c => {
+      const a = c.anchor(); const r = a && a.getBoundingClientRect();
+      const vis = a && r.bottom > top0 - 60 && r.top < H - 10 && r.width > 0;
+      c.pinEl.style.display = vis ? 'grid' : 'none';
+      if (!vis) { c.note.style.display = 'none'; return null; }
+      a.classList.add('pm-target');
+      const [px, py] = c.pin(r); c.pinEl.style.left = px + 'px'; c.pinEl.style.top = py + 'px';
+      if (closed.has(c.n)) { c.note.style.display = 'none'; return null; }
+      c.note.style.display = ''; c.note.style.width = NW + 'px';
+      return { c, px, py, h: c.note.offsetHeight, y: Math.max(col === 'right' ? top0 - 50 : top0, py - 24) };
+    }).filter(Boolean).sort((a, b) => a.py - b.py);
+    // sweep down to avoid overlap, then pull up if the column overflows the window
+    for (let i = 1; i < items.length; i++) items[i].y = Math.max(items[i].y, items[i - 1].y + items[i - 1].h + 10);
+    const over = items.length ? items[items.length - 1].y + items[items.length - 1].h - (H - 8) : 0;
+    if (over > 0) { items[items.length - 1].y -= over; for (let i = items.length - 2; i >= 0; i--) items[i].y = Math.min(items[i].y, items[i + 1].y - items[i].h - 10); }
+    items.forEach(it => {
+      it.y = Math.max(8, it.y);
+      it.c.note.style.left = xN + 'px'; it.c.note.style.top = it.y + 'px';
+      const ex = col === 'left' ? xN + NW : xN, ey = it.y + 16;
+      if (Math.abs(ex - it.px) > 20 || Math.abs(ey - it.py) > 30) lines += `<path d="M${ex} ${ey} C ${(ex + it.px) / 2} ${ey}, ${(ex + it.px) / 2} ${it.py}, ${it.px} ${it.py}"/>`;
+    });
+  });
+  pmLines.innerHTML = lines;
+}
+(function loop() { placeNotes(); requestAnimationFrame(loop); })();
+$('#pmToggle').addEventListener('click', e => {
+  e.preventDefault();
+  document.body.classList.toggle('pm');
+  if (!document.body.classList.contains('pm')) $$('.pm-target').forEach(x => x.classList.remove('pm-target'));
+});
+</script>
+</body>
+</html>
